@@ -1,5 +1,5 @@
 ﻿const CACHE = 'govorni-trener-v2';
-const ASSETS = ['./', './govorni-trener-mobile-preview.html', './manifest.webmanifest'];
+const ASSETS = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -19,6 +19,6 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
         return res;
       })
-      .catch(() => caches.match(e.request).then((r) => r || caches.match('./govorni-trener-mobile-preview.html')))
+      .catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html')))
   );
 });
