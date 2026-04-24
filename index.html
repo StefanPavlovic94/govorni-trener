@@ -14,6 +14,11 @@
     .screen { display:none; }
     .screen.active { display:block; }
     .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .tabs { display:flex; gap:8px; margin-bottom:10px; }
+    .tab-btn { flex:1; border:1px solid #eacfbf; background:#fff3e8; color:#8a573f; border-radius:12px; padding:10px; font-weight:800; cursor:pointer; }
+    .tab-btn.active { background:#ef6d2f; color:#fff; border-color:#ef6d2f; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
     .mode { background:#fff0e2; border:1px solid #efc9af; border-radius:999px; padding:6px 10px; font-weight:800; font-size:12px; }
     .panel { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 24px rgba(80,40,20,.12); padding:12px; }
     .panel + .panel { margin-top:10px; }
@@ -48,7 +53,6 @@
     .big-card { border:0; width:100%; background:transparent; padding:0; cursor:pointer; text-align:unset; }
     .img { width:100%; height:260px; object-fit:cover; border-radius:16px; border:1px solid #efd8ca; background:#ffe7d4; display:block; }
     .word { margin:10px 0 0; text-align:center; font-size:42px; font-weight:900; }
-    .syll { margin:2px 0 8px; text-align:center; color:#bf5f36; font-size:24px; font-weight:900; letter-spacing:.8px; }
     .listen-dot { display:inline-block; width:10px; height:10px; border-radius:99px; background:#d8602f; margin-right:6px; animation:pulse .9s ease infinite; }
     @keyframes pulse { from { transform:scale(.9); opacity:.6; } to { transform:scale(1.2); opacity:1; } }
 
@@ -77,67 +81,92 @@
         <h1 style="margin:0;font-size:22px;">Govorni trener</h1>
         <div id="modeBadge" class="mode">Parent mode</div>
       </div>
-
-      <div class="panel">
-        <h2 class="title">Pokreni Child mode</h2>
-        <div class="row">
-          <button id="startSpeechModeBtn" type="button" class="btn pri">Speech mode</button>
-          <button id="startEasyModeBtn" type="button" class="btn mut">Easy mode</button>
-        </div>
-        <p class="hint">U child modu izlaz je zaključan: skriveno dugme 5s + PIN.</p>
+      <div class="tabs">
+        <button id="tabEasyBtn" type="button" class="tab-btn active">Easy</button>
+        <button id="tabSpeechBtn" type="button" class="tab-btn">Speech</button>
       </div>
 
-      <div class="panel">
-        <h2 class="title">Dodaj karticu</h2>
-        <label for="wordInput">Reč</label>
-        <input id="wordInput" placeholder="npr. Mama" />
-
-        <label for="syllablesInput">Slogovi</label>
-        <input id="syllablesInput" placeholder="npr. MA-MA" />
-
-        <label for="imageInput">Slika</label>
-        <input id="imageInput" type="file" accept="image/*" />
-
-        <label>Snimanje zvuka</label>
-        <div class="row">
-          <button id="recordBtn" class="btn warn" type="button">Snimaj</button>
-          <button id="stopBtn" class="btn mut" type="button" disabled>Stop</button>
-          <button id="playRecordedBtn" class="btn mut" type="button" disabled>Pusti</button>
+      <div id="speechTab" class="tab-panel">
+        <div class="panel">
+          <h2 class="title">Speech Mode</h2>
+          <div class="row"><button id="startSpeechModeBtn" type="button" class="btn pri">Pokreni speech mode</button></div>
+          <p class="hint">U child modu izlaz je zaključan: skriveno dugme 5s + PIN.</p>
         </div>
 
-        <label for="audioInput">Ili učitaj audio fajl</label>
-        <input id="audioInput" type="file" accept="audio/*" />
+        <div class="panel">
+          <h2 class="title">Dodaj speech karticu</h2>
+          <label for="wordInput">Reč</label>
+          <input id="wordInput" placeholder="npr. Mama" />
 
-        <div id="addStatus" class="status">Dodaj podatke kartice pa sačuvaj.</div>
-        <div class="row" style="margin-top:8px;"><button id="saveCardBtn" type="button" class="btn ok">Sačuvaj karticu</button></div>
+
+          <label for="imageInput">Slika</label>
+          <input id="imageInput" type="file" accept="image/*" />
+          <div class="row" style="margin-top:8px;">
+            <button id="openSpeechCameraBtn" type="button" class="btn mut">Slikaj kamerom</button>
+          </div>
+
+          <label>Snimanje zvuka</label>
+          <div class="row">
+            <button id="recordBtn" class="btn warn" type="button">Snimaj</button>
+            <button id="stopBtn" class="btn mut" type="button" disabled>Stop</button>
+            <button id="playRecordedBtn" class="btn mut" type="button" disabled>Pusti</button>
+          </div>
+
+          <label for="audioInput">Ili učitaj audio fajl</label>
+          <input id="audioInput" type="file" accept="audio/*" />
+
+          <div id="addStatus" class="status">Dodaj podatke kartice pa sačuvaj.</div>
+          <div class="row" style="margin-top:8px;"><button id="saveCardBtn" type="button" class="btn ok">Sačuvaj karticu</button></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="title">Moje speech kartice</h2>
+          <p class="hint">Klik na karticu pušta njen snimljeni zvuk.</p>
+          <div id="cardsList" class="list"></div>
+        </div>
       </div>
 
-      <div class="panel">
-        <h2 class="title">Moje kartice</h2>
-        <p class="hint">Klik na karticu pušta njen snimljeni zvuk.</p>
-        <div id="cardsList" class="list"></div>
-      </div>
+      <div id="easyTab" class="tab-panel active">
+        <div class="panel">
+          <h2 class="title">Easy Mode</h2>
+          <div class="row"><button id="startEasyModeBtn" type="button" class="btn pri">Pokreni easy mode</button></div>
+          <p class="hint">U easy modu prikazujemo sliku i zvuk, bez obaveznog izgovora.</p>
+        </div>
 
-      <div class="panel">
-        <h2 class="title">Easy override zvuka</h2>
-        <label for="easyCardSelect">Easy kartica</label>
-        <select id="easyCardSelect"></select>
-        <label for="easyAudioInput">Novi audio za izabranu easy karticu</label>
-        <input id="easyAudioInput" type="file" accept="audio/*" />
-        <label>Snimanje override zvuka</label>
-        <div class="row">
-          <button id="easyRecordBtn" type="button" class="btn warn">Snimaj</button>
-          <button id="easyStopBtn" type="button" class="btn mut" disabled>Stop</button>
-          <button id="easyPlayBtn" type="button" class="btn mut" disabled>Pusti</button>
+        <div class="panel">
+          <h2 class="title">Dodaj / Izmeni easy karticu</h2>
+          <label for="easyWordInput">Tekst (skriven u easy prikazu)</label>
+          <input id="easyWordInput" placeholder="npr. Pas" />
+
+
+          <label for="easyImageInput">Slika</label>
+          <input id="easyImageInput" type="file" accept="image/*" />
+          <div class="row" style="margin-top:8px;">
+            <button id="openEasyCameraBtn" type="button" class="btn mut">Slikaj kamerom</button>
+          </div>
+
+          <label>Snimanje zvuka</label>
+          <div class="row">
+            <button id="easyRecordBtn" type="button" class="btn warn">Snimaj</button>
+            <button id="easyStopBtn" type="button" class="btn mut" disabled>Stop</button>
+            <button id="easyPlayBtn" type="button" class="btn mut" disabled>Pusti</button>
+          </div>
+
+          <label for="easyAudioInput">Ili učitaj audio fajl</label>
+          <input id="easyAudioInput" type="file" accept="audio/*" />
+
+          <div class="row" style="margin-top:8px;">
+            <button id="saveEasyCardBtn" type="button" class="btn ok">Sačuvaj easy karticu</button>
+            <button id="cancelEasyEditBtn" type="button" class="btn mut">Otkaži izmenu</button>
+          </div>
+          <div id="easyStatus" class="status">Dodaj easy karticu ili izaberi postojeću za izmenu.</div>
         </div>
-        <div class="row" style="margin-top:8px;">
-          <button id="saveEasyOverrideBtn" type="button" class="btn ok">Sačuvaj override</button>
-          <button id="clearEasyOverrideBtn" type="button" class="btn mut">Ukloni override</button>
+
+        <div class="panel">
+          <h2 class="title">Moje easy kartice</h2>
+          <p class="hint">Klik na karticu pušta njen zvuk. Možeš menjati i brisati.</p>
+          <div id="easyCardsList" class="list"></div>
         </div>
-        <div class="row" style="margin-top:8px;">
-          <button id="previewEasyOverrideBtn" type="button" class="btn mut">Pusti trenutni zvuk</button>
-        </div>
-        <div id="easyStatus" class="status">Izaberi easy karticu i audio fajl za override.</div>
       </div>
     </section>
 
@@ -149,7 +178,6 @@
           <button id="tapCard" class="big-card" type="button">
             <img id="practiceImage" class="img" alt="kartica" />
             <h2 id="practiceWord" class="word"></h2>
-            <p id="practiceSyllables" class="syll"></p>
           </button>
           <div id="nextEasyRow" class="row" style="margin-top:8px;">
             <button id="nextEasyBtn" type="button" class="btn pri" disabled aria-label="Sledeća kartica"><span class="arrow-icon">➜</span></button>
@@ -185,38 +213,53 @@
     </div>
   </section>
 
+  <section id="cameraModal" class="pin-modal">
+    <div class="pin-card">
+      <h3>Kamera</h3>
+      <video id="cameraVideo" autoplay playsinline style="width:100%;border-radius:12px;background:#000;"></video>
+      <canvas id="cameraCanvas" class="hidden-canvas" style="display:none;"></canvas>
+      <div class="row" style="margin-top:8px;">
+        <button id="cameraCaptureBtn" class="btn ok" type="button">Uslikaj</button>
+        <button id="cameraCancelBtn" class="btn mut" type="button">Otkaži</button>
+      </div>
+    </div>
+  </section>
+
   <script>
     const DB_NAME = 'govorni_trener_db';
     const DB_VERSION = 1;
+    const EASY_DB_NAME = 'govorni_trener_easy_db';
+    const EASY_DB_VERSION = 1;
     const CARDS_STORE = 'cards';
+    const EASY_CARDS_STORE = 'easy_cards';
     const LEGACY_CARDS_KEY = 'gt_cards_v2';
     const MODE_KEY = 'gt_mode_v2';
     const SESSION_TYPE_KEY = 'gt_session_type_v1';
     const PIN_KEY = 'gt_pin_v2';
     const EXIT_HOLD_MS = 5000;
     const EASY_NEXT_LOCK_MS = 5000;
-    const EASY_OVERRIDES_KEY = 'gt_easy_overrides_v1';
+    const EASY_CARDS_KEY = 'gt_easy_cards_v1';
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     const defaultImg = (emoji) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='600' height='420'><rect width='100%' height='100%' fill='#ffe5d1'/><text x='50%' y='56%' dominant-baseline='middle' text-anchor='middle' font-size='180'>${emoji}</text></svg>`)}`;
     const defaults = [
-      { id:'1', word:'Mama', syllables:'MA-MA', imageUrl:defaultImg('👩'), audioUrl:'' },
-      { id:'2', word:'Voda', syllables:'VO-DA', imageUrl:defaultImg('💧'), audioUrl:'' },
-      { id:'3', word:'Tata', syllables:'TA-TA', imageUrl:defaultImg('👨'), audioUrl:'' }
+      { id:'1', word:'Mama', imageUrl:defaultImg('👩'), audioUrl:'' },
+      { id:'2', word:'Voda', imageUrl:defaultImg('💧'), audioUrl:'' },
+      { id:'3', word:'Tata', imageUrl:defaultImg('👨'), audioUrl:'' }
     ];
-    const EASY_CARDS = [
-      { id:'e1', word:'Pas', syllables:'PAS', imageUrl:defaultImg('🐶'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Sound-of-dog.ogg', soundText:'Av av' },
-      { id:'e2', word:'Mačka', syllables:'MA-ČKA', imageUrl:defaultImg('🐱'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Meow.ogg', soundText:'Mjau' },
-      { id:'e3', word:'Kokoška', syllables:'KO-KO-ŠKA', imageUrl:defaultImg('🐔'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Medium_rooster_crowing.ogg', soundText:'Ko ko da' },
-      { id:'e4', word:'Svinja', syllables:'SVI-NJA', imageUrl:defaultImg('🐷'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Mudchute%20pig%201.ogg', soundText:'Grok grok' },
-      { id:'e5', word:'Mama', syllables:'MA-MA', imageUrl:defaultImg('👩'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-mom.ogg', soundText:'Mama' },
-      { id:'e6', word:'Tata', syllables:'TA-TA', imageUrl:defaultImg('👨'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-father.ogg', soundText:'Tata' },
-      { id:'e7', word:'Deda', syllables:'DE-DA', imageUrl:defaultImg('👴'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-grandfather.ogg', soundText:'Deda' },
-      { id:'e8', word:'Baba', syllables:'BA-BA', imageUrl:defaultImg('👵'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-grandmother.ogg', soundText:'Baba' },
-      { id:'e9', word:'Seka', syllables:'SE-KA', imageUrl:defaultImg('👧'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-sister.ogg', soundText:'Seka' },
-      { id:'e10', word:'Beba', syllables:'BE-BA', imageUrl:defaultImg('👶'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Crying_newborn_baby.ogg', soundText:'Beba' },
-      { id:'e11', word:'Flašica', syllables:'FLA-ŠI-CA', imageUrl:defaultImg('🍼'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Water_sloshing_in_a_small_bottle.ogg', soundText:'Flašica' },
-      { id:'e12', word:'Voda', syllables:'VO-DA', imageUrl:defaultImg('💧'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-water.ogg', soundText:'Voda' }
+    const EASY_DEFAULTS = [
+      { id:'e1', word:'Pas', imageUrl:defaultImg('🐶'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Sound-of-dog.ogg', soundText:'Av av' },
+      { id:'e2', word:'Mačka', imageUrl:defaultImg('🐱'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Meow.ogg', soundText:'Mjau' },
+      { id:'e3', word:'Kokoška', imageUrl:defaultImg('🐔'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Medium_rooster_crowing.ogg', soundText:'Ko ko da' },
+      { id:'e4', word:'Svinja', imageUrl:defaultImg('🐷'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Mudchute%20pig%201.ogg', soundText:'Grok grok' },
+      { id:'e5', word:'Mama', imageUrl:defaultImg('👩'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-mom.ogg', soundText:'Mama' },
+      { id:'e6', word:'Tata', imageUrl:defaultImg('👨'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-father.ogg', soundText:'Tata' },
+      { id:'e7', word:'Deda', imageUrl:defaultImg('👴'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-grandfather.ogg', soundText:'Deda' },
+      { id:'e8', word:'Baba', imageUrl:defaultImg('👵'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-grandmother.ogg', soundText:'Baba' },
+      { id:'e9', word:'Seka', imageUrl:defaultImg('👧'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-sister.ogg', soundText:'Seka' },
+      { id:'e10', word:'Beba', imageUrl:defaultImg('👶'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Crying_newborn_baby.ogg', soundText:'Beba' },
+      { id:'e11', word:'Flašica', imageUrl:defaultImg('🍼'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Water_sloshing_in_a_small_bottle.ogg', soundText:'Flašica' },
+      { id:'e12', word:'Voda', imageUrl:defaultImg('💧'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-water.ogg', soundText:'Voda' }
     ];
 
     const state = {
@@ -225,18 +268,21 @@
       holdTimer: null, mediaRecorder: null, recordChunks: [], recordedAudioUrl: '', activeAudio: null,
       db: null, navLockInstalled: false, childSessionType: 'speech', listenedCurrent: false,
       easyMediaRecorder: null, easyRecordChunks: [], easyRecordedAudioUrl: '', easyUnlockTimer: null, easyLockedAfterFirstTap: false,
-      easyOverrides: {}
+      easyCards: [], editingEasyId: null, dbReady: false, easyDb: null, easyDbReady: false,
+      cameraStream: null, cameraTarget: null, capturedSpeechImageUrl: '', capturedEasyImageUrl: ''
     };
 
     const $ = (id) => document.getElementById(id);
     const nodes = {
       homeScreen: $('homeScreen'), practiceScreen: $('practiceScreen'), modeBadge: $('modeBadge'),
-      startSpeechModeBtn: $('startSpeechModeBtn'), startEasyModeBtn: $('startEasyModeBtn'), wordInput: $('wordInput'), syllablesInput: $('syllablesInput'), imageInput: $('imageInput'), audioInput: $('audioInput'),
+      tabSpeechBtn: $('tabSpeechBtn'), tabEasyBtn: $('tabEasyBtn'), speechTab: $('speechTab'), easyTab: $('easyTab'),
+      startSpeechModeBtn: $('startSpeechModeBtn'), startEasyModeBtn: $('startEasyModeBtn'), wordInput: $('wordInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
       recordBtn: $('recordBtn'), stopBtn: $('stopBtn'), playRecordedBtn: $('playRecordedBtn'), saveCardBtn: $('saveCardBtn'), addStatus: $('addStatus'),
-      cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), tapNote: $('tapNote'), nextEasyRow: $('nextEasyRow'), nextEasyBtn: $('nextEasyBtn'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceSyllables: $('practiceSyllables'), practiceStatus: $('practiceStatus'),
-      easyCardSelect: $('easyCardSelect'), easyAudioInput: $('easyAudioInput'), easyRecordBtn: $('easyRecordBtn'), easyStopBtn: $('easyStopBtn'), easyPlayBtn: $('easyPlayBtn'), saveEasyOverrideBtn: $('saveEasyOverrideBtn'), clearEasyOverrideBtn: $('clearEasyOverrideBtn'), previewEasyOverrideBtn: $('previewEasyOverrideBtn'), easyStatus: $('easyStatus'),
+      cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), tapNote: $('tapNote'), nextEasyRow: $('nextEasyRow'), nextEasyBtn: $('nextEasyBtn'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceStatus: $('practiceStatus'),
+      easyWordInput: $('easyWordInput'), easyImageInput: $('easyImageInput'), openEasyCameraBtn: $('openEasyCameraBtn'), easyAudioInput: $('easyAudioInput'), easyCardsList: $('easyCardsList'), easyRecordBtn: $('easyRecordBtn'), easyStopBtn: $('easyStopBtn'), easyPlayBtn: $('easyPlayBtn'), saveEasyCardBtn: $('saveEasyCardBtn'), cancelEasyEditBtn: $('cancelEasyEditBtn'), easyStatus: $('easyStatus'),
       rewardOverlay: $('rewardOverlay'), hiddenExitBtn: $('hiddenExitBtn'), pinModal: $('pinModal'), pinInput: $('pinInput'), pinConfirmBtn: $('pinConfirmBtn'), pinCancelBtn: $('pinCancelBtn'),
-      fsBanner: $('fsBanner'), fsRetryBtn: $('fsRetryBtn')
+      fsBanner: $('fsBanner'), fsRetryBtn: $('fsRetryBtn'),
+      cameraModal: $('cameraModal'), cameraVideo: $('cameraVideo'), cameraCanvas: $('cameraCanvas'), cameraCaptureBtn: $('cameraCaptureBtn'), cameraCancelBtn: $('cameraCancelBtn')
     };
 
     function normalizeWord(text) {
@@ -252,6 +298,17 @@
 
     function openDB() {
       return new Promise((resolve, reject) => {
+        let settled = false;
+        const fail = (err) => {
+          if (settled) return;
+          settled = true;
+          reject(err);
+        };
+        const ok = (db) => {
+          if (settled) return;
+          settled = true;
+          resolve(db);
+        };
         const req = indexedDB.open(DB_NAME, DB_VERSION);
         req.onupgradeneeded = (event) => {
           const db = event.target.result;
@@ -259,8 +316,37 @@
             db.createObjectStore(CARDS_STORE, { keyPath: 'id' });
           }
         };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        req.onblocked = () => fail(new Error('indexeddb-blocked'));
+        req.onsuccess = () => ok(req.result);
+        req.onerror = () => fail(req.error || new Error('indexeddb-open-failed'));
+        setTimeout(() => fail(new Error('indexeddb-timeout')), 12000);
+      });
+    }
+
+    function openEasyDB() {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const fail = (err) => {
+          if (settled) return;
+          settled = true;
+          reject(err);
+        };
+        const ok = (db) => {
+          if (settled) return;
+          settled = true;
+          resolve(db);
+        };
+        const req = indexedDB.open(EASY_DB_NAME, EASY_DB_VERSION);
+        req.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(EASY_CARDS_STORE)) {
+            db.createObjectStore(EASY_CARDS_STORE, { keyPath: 'id' });
+          }
+        };
+        req.onblocked = () => fail(new Error('indexeddb-easy-blocked'));
+        req.onsuccess = () => ok(req.result);
+        req.onerror = () => fail(req.error || new Error('indexeddb-easy-open-failed'));
+        setTimeout(() => fail(new Error('indexeddb-easy-timeout')), 12000);
       });
     }
 
@@ -292,6 +378,34 @@
       });
     }
 
+    function dbGetAllEasyCards() {
+      return new Promise((resolve, reject) => {
+        const tx = state.easyDb.transaction(EASY_CARDS_STORE, 'readonly');
+        const store = tx.objectStore(EASY_CARDS_STORE);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbPutEasyCard(card) {
+      return new Promise((resolve, reject) => {
+        const tx = state.easyDb.transaction(EASY_CARDS_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(EASY_CARDS_STORE).put(card);
+      });
+    }
+
+    function dbDeleteEasyCard(cardId) {
+      return new Promise((resolve, reject) => {
+        const tx = state.easyDb.transaction(EASY_CARDS_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(EASY_CARDS_STORE).delete(cardId);
+      });
+    }
+
     async function migrateLegacyCardsIfNeeded() {
       const existing = await dbGetAllCards();
       if (existing.length > 0) return existing;
@@ -307,7 +421,6 @@
         await dbPutCard({
           id: String(card.id || Date.now() + Math.random()),
           word: card.word || 'Reč',
-          syllables: card.syllables || '',
           imageUrl: card.imageUrl || defaultImg('🧩'),
           audioUrl: card.audioUrl || ''
         });
@@ -315,25 +428,133 @@
       return dbGetAllCards();
     }
 
+    async function migrateEasyCardsIfNeeded() {
+      const existing = await dbGetAllEasyCards();
+      if (existing.length > 0) return existing;
+
+      let legacyEasyCards = [];
+      try {
+        const parsed = JSON.parse(localStorage.getItem(EASY_CARDS_KEY) || 'null');
+        legacyEasyCards = Array.isArray(parsed) ? parsed : [];
+      } catch {}
+
+      const seed = legacyEasyCards.length > 0 ? legacyEasyCards : EASY_DEFAULTS;
+      for (const card of seed) {
+        await dbPutEasyCard({
+          id: String(card.id || `easy_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`),
+          word: card.word || 'Kartica',
+          imageUrl: card.imageUrl || defaultImg('🧩'),
+          audioUrl: card.audioUrl || '',
+          soundText: card.soundText || card.word || 'Zvuk'
+        });
+      }
+      return dbGetAllEasyCards();
+    }
+
     async function loadState() {
-      state.db = await openDB();
       const mode = localStorage.getItem(MODE_KEY);
       if (mode === 'child' || mode === 'parent') state.mode = mode;
       const st = localStorage.getItem(SESSION_TYPE_KEY);
       if (st === 'easy' || st === 'speech') state.childSessionType = st;
-      try {
-        const parsed = JSON.parse(localStorage.getItem(EASY_OVERRIDES_KEY) || '{}');
-        if (parsed && typeof parsed === 'object') state.easyOverrides = parsed;
-      } catch {
-        state.easyOverrides = {};
-      }
       state.pin = localStorage.getItem(PIN_KEY) || '1234';
-      const cards = await migrateLegacyCardsIfNeeded();
-      state.cards = cards;
+
+      try {
+        state.db = await openDB();
+        state.dbReady = true;
+        const cards = await migrateLegacyCardsIfNeeded();
+        state.cards = cards;
+      } catch {
+        state.dbReady = false;
+        try {
+          const legacySpeech = JSON.parse(localStorage.getItem(LEGACY_CARDS_KEY) || 'null');
+          state.cards = Array.isArray(legacySpeech) && legacySpeech.length ? legacySpeech : [...defaults];
+        } catch {
+          state.cards = [...defaults];
+        }
+      }
+
+      try {
+        state.easyDb = await openEasyDB();
+        state.easyDbReady = true;
+        const easyCards = await migrateEasyCardsIfNeeded();
+        state.easyCards = easyCards;
+      } catch {
+        state.easyDbReady = false;
+        try {
+          const legacyEasy = JSON.parse(localStorage.getItem(EASY_CARDS_KEY) || 'null');
+          state.easyCards = Array.isArray(legacyEasy) && legacyEasy.length ? legacyEasy : [...EASY_DEFAULTS];
+        } catch {
+          state.easyCards = [...EASY_DEFAULTS];
+        }
+      }
     }
 
-    function persistEasyOverrides() {
-      localStorage.setItem(EASY_OVERRIDES_KEY, JSON.stringify(state.easyOverrides));
+    async function recoverDBConnection() {
+      try {
+        state.easyDb = await openEasyDB();
+        state.easyDbReady = true;
+        return true;
+      } catch {
+        state.easyDbReady = false;
+        return false;
+      }
+    }
+
+    async function recoverMainDBConnection() {
+      try {
+        state.db = await openDB();
+        state.dbReady = true;
+        return true;
+      } catch {
+        state.dbReady = false;
+        return false;
+      }
+    }
+
+    async function openCamera(target) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const t = target === 'easy' ? nodes.easyStatus : nodes.addStatus;
+        setStatus(t, 'Kamera nije podržana na ovom browseru.', 'warn');
+        return;
+      }
+      try {
+        state.cameraTarget = target;
+        state.cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        nodes.cameraVideo.srcObject = state.cameraStream;
+        nodes.cameraModal.classList.add('show');
+      } catch {
+        const t = target === 'easy' ? nodes.easyStatus : nodes.addStatus;
+        setStatus(t, 'Pristup kameri nije odobren.', 'warn');
+      }
+    }
+
+    function closeCamera() {
+      if (state.cameraStream) {
+        state.cameraStream.getTracks().forEach((t) => t.stop());
+      }
+      state.cameraStream = null;
+      nodes.cameraVideo.srcObject = null;
+      nodes.cameraModal.classList.remove('show');
+      state.cameraTarget = null;
+    }
+
+    function captureCameraImage() {
+      if (!state.cameraStream || !state.cameraTarget) return;
+      const video = nodes.cameraVideo;
+      const canvas = nodes.cameraCanvas;
+      canvas.width = video.videoWidth || 720;
+      canvas.height = video.videoHeight || 1280;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      if (state.cameraTarget === 'speech') {
+        state.capturedSpeechImageUrl = dataUrl;
+        setStatus(nodes.addStatus, 'Slika je uslikana kamerom.', 'ok');
+      } else {
+        state.capturedEasyImageUrl = dataUrl;
+        setStatus(nodes.easyStatus, 'Easy slika je uslikana kamerom.', 'ok');
+      }
+      closeCamera();
     }
 
     function showScreen(name) {
@@ -413,10 +634,7 @@
 
     function getSessionCards() {
       if (state.childSessionType !== 'easy') return state.cards;
-      return EASY_CARDS.map((card) => ({
-        ...card,
-        audioUrl: state.easyOverrides[card.id] || card.audioUrl
-      }));
+      return state.easyCards;
     }
 
     function currentSessionCard() {
@@ -462,7 +680,6 @@
             <img class="thumb" src="${card.imageUrl}" alt="${card.word}">
             <div style="flex:1;text-align:left;">
               <p class="w">${card.word}</p>
-              <p class="sy">${card.syllables}</p>
             </div>
           </button>
           <button type="button" class="del-btn">Obriši</button>
@@ -499,58 +716,93 @@
       });
     }
 
-    function renderEasyOverrideUI() {
-      nodes.easyCardSelect.innerHTML = EASY_CARDS.map((c) => `<option value="${c.id}">${c.word}</option>`).join('');
+    function switchHomeTab(tab) {
+      const isSpeech = tab === 'speech';
+      nodes.tabSpeechBtn.classList.toggle('active', isSpeech);
+      nodes.tabEasyBtn.classList.toggle('active', !isSpeech);
+      nodes.speechTab.classList.toggle('active', isSpeech);
+      nodes.easyTab.classList.toggle('active', !isSpeech);
+    }
+
+    function resetEasyForm() {
+      state.editingEasyId = null;
+      nodes.easyWordInput.value = '';
+      nodes.easyImageInput.value = '';
+      nodes.easyAudioInput.value = '';
+      state.easyRecordedAudioUrl = '';
+      state.capturedEasyImageUrl = '';
+      nodes.easyPlayBtn.disabled = true;
       nodes.easyRecordBtn.disabled = false;
       nodes.easyStopBtn.disabled = true;
-      nodes.easyPlayBtn.disabled = true;
-      setStatus(nodes.easyStatus, 'Izaberi easy karticu i audio fajl za override.', '');
     }
 
-    function selectedEasyCard() {
-      const id = nodes.easyCardSelect.value;
-      return EASY_CARDS.find((c) => c.id === id) || EASY_CARDS[0];
-    }
-
-    async function saveEasyOverride() {
-      const card = selectedEasyCard();
-      const file = nodes.easyAudioInput.files[0];
-      if (!card) return;
-      if (!file && !state.easyRecordedAudioUrl) {
-        setStatus(nodes.easyStatus, 'Izaberi audio fajl ili snimi override zvuk.', 'warn');
+    function renderEasyCardsList() {
+      nodes.easyCardsList.innerHTML = '';
+      if (!state.easyCards.length) {
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.textContent = 'Nema easy kartica.';
+        nodes.easyCardsList.appendChild(d);
         return;
+      }
+      state.easyCards.forEach((card) => {
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.innerHTML = `
+          <button type="button" class="item-main">
+            <img class="thumb" src="${card.imageUrl}" alt="${card.word}">
+            <div style="flex:1;text-align:left;">
+              <p class="w">${card.word}</p>
+            </div>
+          </button>
+          <button type="button" class="del-btn" data-act="edit">Izmeni</button>
+          <button type="button" class="del-btn" data-act="delete">Obriši</button>
+        `;
+        const playBtn = row.querySelector('.item-main');
+        const editBtn = row.querySelector('[data-act="edit"]');
+        const deleteBtn = row.querySelector('[data-act="delete"]');
+
+        playBtn.addEventListener('click', async () => {
+          const played = await playCardSound(card);
+          setStatus(nodes.easyStatus, played ? `Puštam zvuk za "${card.word}".` : `Ne mogu da pustim zvuk za "${card.word}".`, played ? 'ok' : 'warn');
+        });
+        editBtn.addEventListener('click', () => {
+          state.editingEasyId = card.id;
+          nodes.easyWordInput.value = card.word || '';
+          nodes.easyImageInput.value = '';
+          nodes.easyAudioInput.value = '';
+          state.easyRecordedAudioUrl = '';
+          nodes.easyPlayBtn.disabled = true;
+          setStatus(nodes.easyStatus, `Menjaš karticu "${card.word}".`, '');
+          switchHomeTab('easy');
+        });
+        deleteBtn.addEventListener('click', () => deleteEasyCard(card.id));
+        nodes.easyCardsList.appendChild(row);
+      });
+    }
+
+    async function deleteEasyCard(cardId) {
+      const card = state.easyCards.find((c) => c.id === cardId);
+      if (!card) return;
+      const confirmed = window.confirm(`Obriši easy karticu "${card.word}"?`);
+      if (!confirmed) return;
+      if (!state.easyDbReady) {
+        const recovered = await recoverDBConnection();
+        if (!recovered) {
+          setStatus(nodes.easyStatus, 'Baza je blokirana. Zatvori druge tabove aplikacije i osveži stranicu.', 'warn');
+          return;
+        }
       }
       try {
-        const audioData = state.easyRecordedAudioUrl || await toDataURL(file);
-        state.easyOverrides[card.id] = audioData;
-        persistEasyOverrides();
-        nodes.easyAudioInput.value = '';
-        state.easyRecordedAudioUrl = '';
-        nodes.easyPlayBtn.disabled = true;
-        setStatus(nodes.easyStatus, `Override sačuvan za "${card.word}".`, 'ok');
+        await dbDeleteEasyCard(cardId);
       } catch {
-        setStatus(nodes.easyStatus, 'Ne mogu da učitam audio fajl.', 'warn');
-      }
-    }
-
-    function clearEasyOverride() {
-      const card = selectedEasyCard();
-      if (!card) return;
-      if (!state.easyOverrides[card.id]) {
-        setStatus(nodes.easyStatus, `Za "${card.word}" nema override zvuka.`, 'warn');
+        setStatus(nodes.easyStatus, 'Brisanje nije uspelo (baza).', 'warn');
         return;
       }
-      delete state.easyOverrides[card.id];
-      persistEasyOverrides();
-      setStatus(nodes.easyStatus, `Override uklonjen za "${card.word}".`, 'ok');
-    }
-
-    async function previewEasySound() {
-      const card = selectedEasyCard();
-      if (!card) return;
-      const effective = { ...card, audioUrl: state.easyOverrides[card.id] || card.audioUrl };
-      const played = await playCardSound(effective);
-      setStatus(nodes.easyStatus, played ? `Puštam zvuk za "${card.word}".` : `Ne mogu da pustim zvuk za "${card.word}".`, played ? 'ok' : 'warn');
+      state.easyCards = state.easyCards.filter((c) => c.id !== cardId);
+      if (state.editingEasyId === cardId) resetEasyForm();
+      renderEasyCardsList();
+      setStatus(nodes.easyStatus, `Kartica "${card.word}" je obrisana.`, 'ok');
     }
 
     async function startEasyRecording() {
@@ -579,13 +831,13 @@
           nodes.easyStopBtn.disabled = true;
           nodes.easyPlayBtn.disabled = false;
           stream.getTracks().forEach((t) => t.stop());
-          setStatus(nodes.easyStatus, 'Easy override snimak je spreman.', 'ok');
+          setStatus(nodes.easyStatus, 'Easy snimak je spreman.', 'ok');
         };
         state.easyMediaRecorder.start();
         nodes.easyRecordBtn.disabled = true;
         nodes.easyStopBtn.disabled = false;
         nodes.easyPlayBtn.disabled = true;
-        setStatus(nodes.easyStatus, 'Snimanje easy override zvuka...', '');
+        setStatus(nodes.easyStatus, 'Snimanje easy zvuka...', '');
       } catch {
         setStatus(nodes.easyStatus, 'Mikrofon nije odobren.', 'warn');
       }
@@ -595,6 +847,73 @@
       if (state.easyMediaRecorder && state.easyMediaRecorder.state !== 'inactive') state.easyMediaRecorder.stop();
     }
 
+    async function saveEasyCard() {
+      const word = nodes.easyWordInput.value.trim();
+      const imageFile = nodes.easyImageInput.files[0];
+      const audioFile = nodes.easyAudioInput.files[0];
+
+      if (!word) {
+        setStatus(nodes.easyStatus, 'Tekst kartice je obavezan.', 'warn');
+        return;
+      }
+      const editing = state.easyCards.find((c) => c.id === state.editingEasyId);
+      let imageUrl = editing ? editing.imageUrl : '';
+      let audioUrl = editing ? editing.audioUrl : '';
+      try {
+        if (imageFile) imageUrl = await toDataURL(imageFile);
+        else if (state.capturedEasyImageUrl) imageUrl = state.capturedEasyImageUrl;
+        if (audioFile) audioUrl = await toDataURL(audioFile);
+        else if (state.easyRecordedAudioUrl) audioUrl = state.easyRecordedAudioUrl;
+      } catch {
+        setStatus(nodes.easyStatus, 'Greška pri čitanju fajla.', 'warn');
+        return;
+      }
+      if (!imageUrl) {
+        setStatus(nodes.easyStatus, 'Dodaj sliku kartice.', 'warn');
+        return;
+      }
+      if (!audioUrl) {
+        setStatus(nodes.easyStatus, 'Dodaj ili snimi zvuk kartice.', 'warn');
+        return;
+      }
+
+      const payload = editing ? {
+        ...editing,
+        word,
+        imageUrl,
+        audioUrl,
+        soundText: word
+      } : {
+        id: `easy_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+        word,
+        imageUrl,
+        audioUrl,
+        soundText: word
+      };
+      if (!state.easyDbReady) {
+        const recovered = await recoverDBConnection();
+        if (!recovered) {
+          setStatus(nodes.easyStatus, 'Baza je blokirana. Zatvori druge tabove aplikacije i osveži stranicu.', 'warn');
+          return;
+        }
+      }
+      try {
+        await dbPutEasyCard(payload);
+      } catch {
+        setStatus(nodes.easyStatus, 'Ne mogu da sačuvam easy karticu (baza).', 'warn');
+        return;
+      }
+      if (editing) {
+        const idx = state.easyCards.findIndex((c) => c.id === editing.id);
+        if (idx >= 0) state.easyCards[idx] = payload;
+      } else {
+        state.easyCards.push(payload);
+      }
+      renderEasyCardsList();
+      resetEasyForm();
+      setStatus(nodes.easyStatus, editing ? 'Easy kartica izmenjena.' : 'Easy kartica dodata.', 'ok');
+    }
+
     function renderPracticeCard() {
       const card = currentSessionCard();
       if (!card) return;
@@ -602,18 +921,15 @@
       nodes.progress.textContent = `Kartica ${state.index + 1} / ${sessionCards.length}`;
       nodes.practiceImage.src = card.imageUrl;
       nodes.practiceWord.textContent = card.word;
-      nodes.practiceSyllables.textContent = card.syllables;
       if (state.childSessionType === 'easy') {
         nodes.tapNote.style.display = 'none';
         nodes.practiceWord.style.display = 'none';
-        nodes.practiceSyllables.style.display = 'none';
         nodes.nextEasyRow.style.display = 'flex';
         nodes.nextEasyBtn.disabled = !(state.listenedCurrent && !state.easyLockedAfterFirstTap);
         nodes.practiceStatus.style.display = 'none';
       } else {
         nodes.tapNote.style.display = 'block';
         nodes.practiceWord.style.display = 'block';
-        nodes.practiceSyllables.style.display = 'block';
         nodes.tapNote.textContent = 'Dodirni karticu da pustiš snimljeni zvuk.';
         nodes.nextEasyRow.style.display = 'none';
         nodes.practiceStatus.style.display = 'block';
@@ -742,16 +1058,15 @@
 
     async function saveCard() {
       const word = nodes.wordInput.value.trim();
-      const syllables = nodes.syllablesInput.value.trim();
       const imageFile = nodes.imageInput.files[0];
       const audioFile = nodes.audioInput.files[0];
-      if (!word || !syllables) { setStatus(nodes.addStatus, 'Reč i slogovi su obavezni.', 'warn'); return; }
-      if (!imageFile) { setStatus(nodes.addStatus, 'Dodaj sliku kartice.', 'warn'); return; }
+      if (!word) { setStatus(nodes.addStatus, 'Reč je obavezna.', 'warn'); return; }
+      if (!imageFile && !state.capturedSpeechImageUrl) { setStatus(nodes.addStatus, 'Dodaj sliku kartice.', 'warn'); return; }
 
       let imageUrl = '';
       let audioUrl = state.recordedAudioUrl || '';
       try {
-        imageUrl = await toDataURL(imageFile);
+        imageUrl = imageFile ? await toDataURL(imageFile) : state.capturedSpeechImageUrl;
         if (audioFile) audioUrl = await toDataURL(audioFile);
       } catch {
         setStatus(nodes.addStatus, 'Greška pri čitanju fajla.', 'warn');
@@ -760,21 +1075,38 @@
 
       if (!audioUrl) { setStatus(nodes.addStatus, 'Dodaj ili snimi zvuk kartice.', 'warn'); return; }
 
-      const newCard = { id: `${Date.now()}_${Math.random().toString(16).slice(2, 7)}`, word, syllables, imageUrl, audioUrl };
+      const newCard = { id: `${Date.now()}_${Math.random().toString(16).slice(2, 7)}`, word, imageUrl, audioUrl };
+      if (!state.dbReady) {
+        const recovered = await recoverMainDBConnection();
+        if (!recovered) {
+          setStatus(nodes.addStatus, 'Baza je blokirana. Zatvori druge tabove aplikacije i osveži stranicu.', 'warn');
+          return;
+        }
+      }
       try {
         await dbPutCard(newCard);
       } catch {
-        setStatus(nodes.addStatus, 'Čuvanje kartice nije uspelo (storage).', 'warn');
-        return;
+        const recovered = await recoverMainDBConnection();
+        if (recovered) {
+          try {
+            await dbPutCard(newCard);
+          } catch {
+            setStatus(nodes.addStatus, 'Čuvanje kartice nije uspelo (baza).', 'warn');
+            return;
+          }
+        } else {
+          setStatus(nodes.addStatus, 'Čuvanje kartice nije uspelo (baza).', 'warn');
+          return;
+        }
       }
       state.cards.push(newCard);
       renderCardsList();
 
       nodes.wordInput.value = '';
-      nodes.syllablesInput.value = '';
       nodes.imageInput.value = '';
       nodes.audioInput.value = '';
       state.recordedAudioUrl = '';
+      state.capturedSpeechImageUrl = '';
       nodes.playRecordedBtn.disabled = true;
       setStatus(nodes.addStatus, 'Kartica je sačuvana trajno na uređaju.', 'ok');
     }
@@ -782,6 +1114,11 @@
     function enterChildMode(sessionType) {
       if (sessionType === 'speech' && !state.cards.length) {
         setStatus(nodes.addStatus, 'Dodaj bar jednu karticu za speech mode.', 'warn');
+        return;
+      }
+      if (sessionType === 'easy' && !state.easyCards.length) {
+        switchHomeTab('easy');
+        setStatus(nodes.easyStatus, 'Dodaj bar jednu easy karticu.', 'warn');
         return;
       }
       state.mode = 'child';
@@ -833,18 +1170,26 @@
     }
 
     function bind() {
+      nodes.tabSpeechBtn.addEventListener('click', () => switchHomeTab('speech'));
+      nodes.tabEasyBtn.addEventListener('click', () => switchHomeTab('easy'));
       nodes.startSpeechModeBtn.addEventListener('click', () => enterChildMode('speech'));
       nodes.startEasyModeBtn.addEventListener('click', () => enterChildMode('easy'));
+      nodes.openSpeechCameraBtn.addEventListener('click', () => openCamera('speech'));
+      nodes.openEasyCameraBtn.addEventListener('click', () => openCamera('easy'));
+      nodes.cameraCaptureBtn.addEventListener('click', captureCameraImage);
+      nodes.cameraCancelBtn.addEventListener('click', closeCamera);
       nodes.easyRecordBtn.addEventListener('click', startEasyRecording);
       nodes.easyStopBtn.addEventListener('click', stopEasyRecording);
       nodes.easyPlayBtn.addEventListener('click', async () => {
         if (!state.easyRecordedAudioUrl) return;
         const played = await playAudio(state.easyRecordedAudioUrl);
-        setStatus(nodes.easyStatus, played ? 'Puštam easy override snimak.' : 'Ne mogu da pustim easy override snimak.', played ? 'ok' : 'warn');
+        setStatus(nodes.easyStatus, played ? 'Puštam easy snimak.' : 'Ne mogu da pustim easy snimak.', played ? 'ok' : 'warn');
       });
-      nodes.saveEasyOverrideBtn.addEventListener('click', saveEasyOverride);
-      nodes.clearEasyOverrideBtn.addEventListener('click', clearEasyOverride);
-      nodes.previewEasyOverrideBtn.addEventListener('click', previewEasySound);
+      nodes.saveEasyCardBtn.addEventListener('click', saveEasyCard);
+      nodes.cancelEasyEditBtn.addEventListener('click', () => {
+        resetEasyForm();
+        setStatus(nodes.easyStatus, 'Izmena otkazana.', '');
+      });
       nodes.saveCardBtn.addEventListener('click', saveCard);
       nodes.recordBtn.addEventListener('click', startRecording);
       nodes.stopBtn.addEventListener('click', stopRecording);
@@ -906,19 +1251,34 @@
       try {
         await loadState();
       } catch {
-        state.cards = [...defaults];
-        setStatus(nodes.addStatus, 'Storage nije dostupan, koristim privremene kartice.', 'warn');
+        state.dbReady = false;
+        try {
+          const legacySpeech = JSON.parse(localStorage.getItem(LEGACY_CARDS_KEY) || 'null');
+          state.cards = Array.isArray(legacySpeech) && legacySpeech.length ? legacySpeech : [...defaults];
+        } catch {
+          state.cards = [...defaults];
+        }
+        try {
+          const legacyEasy = JSON.parse(localStorage.getItem(EASY_CARDS_KEY) || 'null');
+          state.easyCards = Array.isArray(legacyEasy) && legacyEasy.length ? legacyEasy : [...EASY_DEFAULTS];
+        } catch {
+          state.easyCards = [...EASY_DEFAULTS];
+        }
+        setStatus(nodes.addStatus, 'Baza je trenutno blokirana. Zatvori druge tabove iste aplikacije i osveži stranicu.', 'warn');
       }
       bind();
       installChildNavigationLock();
       renderCardsList();
-      renderEasyOverrideUI();
+      renderEasyCardsList();
+      resetEasyForm();
+      switchHomeTab('easy');
       updateModeUI();
       if (state.mode === 'child') {
         renderPracticeCard();
-        restartListening();
+        if (state.childSessionType === 'speech') restartListening();
       } else {
         setStatus(nodes.addStatus, 'Dodaj podatke kartice pa sačuvaj.', '');
+        setStatus(nodes.easyStatus, 'Dodaj easy karticu ili izaberi postojeću za izmenu.', '');
       }
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
       if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, state.pin);
