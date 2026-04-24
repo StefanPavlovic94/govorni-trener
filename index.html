@@ -9,7 +9,7 @@
   <style>
     :root { --ink:#2b1d17; --line:#edd7c8; --card:#fff; --bg:#fff7ef; --ok:#17a25a; --warn:#efaa1f; --cta:#ef6d2f; }
     * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; background:linear-gradient(140deg,#fff9f1,#ffe2cf); color:var(--ink); font-family:"Trebuchet MS","Segoe UI",sans-serif; }
+    body { margin:0; min-height:100vh; background:linear-gradient(140deg,#fff9f1,#ffe2cf); color:var(--ink); font-family:"Trebuchet MS","Segoe UI",sans-serif; overscroll-behavior:none; }
     .app { max-width:470px; margin:0 auto; min-height:100vh; padding:14px; }
     .screen { display:none; }
     .screen.active { display:block; }
@@ -28,7 +28,7 @@
     .title { margin:0 0 8px; font-size:18px; }
     .hint { margin:0; font-size:12px; color:#88685a; font-weight:700; }
     label { display:block; margin:8px 0 4px; font-size:13px; color:#7f6153; font-weight:800; }
-    input, textarea { width:100%; border:1px solid #e8ccb8; border-radius:10px; padding:9px; font:inherit; }
+    input, textarea, select { width:100%; border:1px solid #e8ccb8; border-radius:10px; padding:9px; font:inherit; background:#fff; }
     textarea { min-height:70px; }
     .status { margin-top:8px; padding:9px; border-radius:10px; border:1px solid #ecd7c8; background:#fff9f4; font-weight:800; min-height:40px; }
     .list { display:grid; gap:8px; max-height:36vh; overflow:auto; }
@@ -56,12 +56,15 @@
     .star { font-size:82px; animation:pop .5s ease infinite alternate; }
     @keyframes pop { from { transform:scale(.92); } to { transform:scale(1.08); } }
 
-    .hidden-exit { position:fixed; right:8px; bottom:8px; width:58px; height:58px; border-radius:999px; border:0; background:rgba(30,20,16,.08); color:transparent; z-index:20; }
+    .hidden-exit { position:fixed; right:8px; bottom:8px; width:58px; height:58px; border-radius:999px; border:0; background:rgba(30,20,16,.08); color:transparent; z-index:20; touch-action:none; }
 
     .pin-modal { position:fixed; inset:0; background:rgba(32,22,18,.72); display:none; place-items:center; z-index:25; padding:14px; }
     .pin-modal.show { display:grid; }
     .pin-card { width:100%; max-width:340px; background:#fff; border-radius:16px; border:1px solid #ebd5c8; padding:12px; }
     .pin-card h3 { margin:0 0 8px; }
+    .fs-banner { position:fixed; left:10px; right:10px; top:10px; z-index:30; background:#2e2018; color:#fff8f2; border-radius:12px; padding:10px; display:none; align-items:center; justify-content:space-between; gap:10px; }
+    .fs-banner.show { display:flex; }
+    .fs-banner button { border:0; border-radius:10px; background:#ef6d2f; color:#fff; padding:8px 10px; font-weight:800; }
   </style>
 </head>
 <body>
@@ -74,8 +77,11 @@
 
       <div class="panel">
         <h2 class="title">Pokreni Child mode</h2>
-        <div class="row"><button id="startChildBtn" type="button" class="btn pri">Počni sesiju</button></div>
-        <p class="hint">U child modu izlaz je zaključan: skriveno dugme 10s + PIN.</p>
+        <div class="row">
+          <button id="startSpeechModeBtn" type="button" class="btn pri">Speech mode</button>
+          <button id="startEasyModeBtn" type="button" class="btn mut">Easy mode</button>
+        </div>
+        <p class="hint">U child modu izlaz je zaključan: skriveno dugme 5s + PIN.</p>
       </div>
 
       <div class="panel">
@@ -108,18 +114,43 @@
         <p class="hint">Klik na karticu pušta njen snimljeni zvuk.</p>
         <div id="cardsList" class="list"></div>
       </div>
+
+      <div class="panel">
+        <h2 class="title">Easy override zvuka</h2>
+        <label for="easyCardSelect">Easy kartica</label>
+        <select id="easyCardSelect"></select>
+        <label for="easyAudioInput">Novi audio za izabranu easy karticu</label>
+        <input id="easyAudioInput" type="file" accept="audio/*" />
+        <label>Snimanje override zvuka</label>
+        <div class="row">
+          <button id="easyRecordBtn" type="button" class="btn warn">Snimaj</button>
+          <button id="easyStopBtn" type="button" class="btn mut" disabled>Stop</button>
+          <button id="easyPlayBtn" type="button" class="btn mut" disabled>Pusti</button>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button id="saveEasyOverrideBtn" type="button" class="btn ok">Sačuvaj override</button>
+          <button id="clearEasyOverrideBtn" type="button" class="btn mut">Ukloni override</button>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button id="previewEasyOverrideBtn" type="button" class="btn mut">Pusti trenutni zvuk</button>
+        </div>
+        <div id="easyStatus" class="status">Izaberi easy karticu i audio fajl za override.</div>
+      </div>
     </section>
 
     <section id="practiceScreen" class="screen">
       <div class="practice-wrap">
         <div class="practice-card">
           <p id="progress" class="progress">Kartica 1 / 1</p>
-          <p class="tap-note">Dodirni karticu da pustiš snimljeni zvuk.</p>
+          <p id="tapNote" class="tap-note">Dodirni karticu da pustiš snimljeni zvuk.</p>
           <button id="tapCard" class="big-card" type="button">
             <img id="practiceImage" class="img" alt="kartica" />
             <h2 id="practiceWord" class="word"></h2>
             <p id="practiceSyllables" class="syll"></p>
           </button>
+          <div id="nextEasyRow" class="row" style="margin-top:8px;">
+            <button id="nextEasyBtn" type="button" class="btn pri" disabled>Dalje</button>
+          </div>
           <div id="practiceStatus" class="status"></div>
         </div>
       </div>
@@ -134,6 +165,10 @@
   </section>
 
   <button id="hiddenExitBtn" class="hidden-exit" aria-label="exit-child"></button>
+  <section id="fsBanner" class="fs-banner">
+    <span>Child mode zahteva fullscreen.</span>
+    <button id="fsRetryBtn" type="button">Uključi</button>
+  </section>
 
   <section id="pinModal" class="pin-modal">
     <div class="pin-card">
@@ -153,8 +188,10 @@
     const CARDS_STORE = 'cards';
     const LEGACY_CARDS_KEY = 'gt_cards_v2';
     const MODE_KEY = 'gt_mode_v2';
+    const SESSION_TYPE_KEY = 'gt_session_type_v1';
     const PIN_KEY = 'gt_pin_v2';
-    const EXIT_HOLD_MS = 10000;
+    const EXIT_HOLD_MS = 5000;
+    const EASY_OVERRIDES_KEY = 'gt_easy_overrides_v1';
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     const defaultImg = (emoji) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='600' height='420'><rect width='100%' height='100%' fill='#ffe5d1'/><text x='50%' y='56%' dominant-baseline='middle' text-anchor='middle' font-size='180'>${emoji}</text></svg>`)}`;
@@ -163,21 +200,39 @@
       { id:'2', word:'Voda', syllables:'VO-DA', imageUrl:defaultImg('💧'), audioUrl:'' },
       { id:'3', word:'Tata', syllables:'TA-TA', imageUrl:defaultImg('👨'), audioUrl:'' }
     ];
+    const EASY_CARDS = [
+      { id:'e1', word:'Pas', syllables:'PAS', imageUrl:defaultImg('🐶'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Sound-of-dog.ogg', soundText:'Av av' },
+      { id:'e2', word:'Mačka', syllables:'MA-ČKA', imageUrl:defaultImg('🐱'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Meow.ogg', soundText:'Mjau' },
+      { id:'e3', word:'Kokoška', syllables:'KO-KO-ŠKA', imageUrl:defaultImg('🐔'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Medium_rooster_crowing.ogg', soundText:'Ko ko da' },
+      { id:'e4', word:'Svinja', syllables:'SVI-NJA', imageUrl:defaultImg('🐷'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Mudchute%20pig%201.ogg', soundText:'Grok grok' },
+      { id:'e5', word:'Mama', syllables:'MA-MA', imageUrl:defaultImg('👩'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-mom.ogg', soundText:'Mama' },
+      { id:'e6', word:'Tata', syllables:'TA-TA', imageUrl:defaultImg('👨'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-father.ogg', soundText:'Tata' },
+      { id:'e7', word:'Deda', syllables:'DE-DA', imageUrl:defaultImg('👴'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-grandfather.ogg', soundText:'Deda' },
+      { id:'e8', word:'Baba', syllables:'BA-BA', imageUrl:defaultImg('👵'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-grandmother.ogg', soundText:'Baba' },
+      { id:'e9', word:'Seka', syllables:'SE-KA', imageUrl:defaultImg('👧'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-sister.ogg', soundText:'Seka' },
+      { id:'e10', word:'Beba', syllables:'BE-BA', imageUrl:defaultImg('👶'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Crying_newborn_baby.ogg', soundText:'Beba' },
+      { id:'e11', word:'Flašica', syllables:'FLA-ŠI-CA', imageUrl:defaultImg('🍼'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/Water_sloshing_in_a_small_bottle.ogg', soundText:'Flašica' },
+      { id:'e12', word:'Voda', syllables:'VO-DA', imageUrl:defaultImg('💧'), audioUrl:'https://commons.wikimedia.org/wiki/Special:FilePath/En-us-water.ogg', soundText:'Voda' }
+    ];
 
     const state = {
       cards: [], mode: 'parent', pin: '1234', index: 0,
       recognition: null, listening: false, advancing: false,
       holdTimer: null, mediaRecorder: null, recordChunks: [], recordedAudioUrl: '', activeAudio: null,
-      db: null
+      db: null, navLockInstalled: false, childSessionType: 'speech', listenedCurrent: false,
+      easyMediaRecorder: null, easyRecordChunks: [], easyRecordedAudioUrl: '',
+      easyOverrides: {}
     };
 
     const $ = (id) => document.getElementById(id);
     const nodes = {
       homeScreen: $('homeScreen'), practiceScreen: $('practiceScreen'), modeBadge: $('modeBadge'),
-      startChildBtn: $('startChildBtn'), wordInput: $('wordInput'), syllablesInput: $('syllablesInput'), imageInput: $('imageInput'), audioInput: $('audioInput'),
+      startSpeechModeBtn: $('startSpeechModeBtn'), startEasyModeBtn: $('startEasyModeBtn'), wordInput: $('wordInput'), syllablesInput: $('syllablesInput'), imageInput: $('imageInput'), audioInput: $('audioInput'),
       recordBtn: $('recordBtn'), stopBtn: $('stopBtn'), playRecordedBtn: $('playRecordedBtn'), saveCardBtn: $('saveCardBtn'), addStatus: $('addStatus'),
-      cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceSyllables: $('practiceSyllables'), practiceStatus: $('practiceStatus'),
-      rewardOverlay: $('rewardOverlay'), hiddenExitBtn: $('hiddenExitBtn'), pinModal: $('pinModal'), pinInput: $('pinInput'), pinConfirmBtn: $('pinConfirmBtn'), pinCancelBtn: $('pinCancelBtn')
+      cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), tapNote: $('tapNote'), nextEasyRow: $('nextEasyRow'), nextEasyBtn: $('nextEasyBtn'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceSyllables: $('practiceSyllables'), practiceStatus: $('practiceStatus'),
+      easyCardSelect: $('easyCardSelect'), easyAudioInput: $('easyAudioInput'), easyRecordBtn: $('easyRecordBtn'), easyStopBtn: $('easyStopBtn'), easyPlayBtn: $('easyPlayBtn'), saveEasyOverrideBtn: $('saveEasyOverrideBtn'), clearEasyOverrideBtn: $('clearEasyOverrideBtn'), previewEasyOverrideBtn: $('previewEasyOverrideBtn'), easyStatus: $('easyStatus'),
+      rewardOverlay: $('rewardOverlay'), hiddenExitBtn: $('hiddenExitBtn'), pinModal: $('pinModal'), pinInput: $('pinInput'), pinConfirmBtn: $('pinConfirmBtn'), pinCancelBtn: $('pinCancelBtn'),
+      fsBanner: $('fsBanner'), fsRetryBtn: $('fsRetryBtn')
     };
 
     function normalizeWord(text) {
@@ -259,11 +314,22 @@
     async function loadState() {
       state.db = await openDB();
       const mode = localStorage.getItem(MODE_KEY);
-      if (mode === 'parent') state.mode = 'parent';
-      else state.mode = 'parent';
+      if (mode === 'child' || mode === 'parent') state.mode = mode;
+      const st = localStorage.getItem(SESSION_TYPE_KEY);
+      if (st === 'easy' || st === 'speech') state.childSessionType = st;
+      try {
+        const parsed = JSON.parse(localStorage.getItem(EASY_OVERRIDES_KEY) || '{}');
+        if (parsed && typeof parsed === 'object') state.easyOverrides = parsed;
+      } catch {
+        state.easyOverrides = {};
+      }
       state.pin = localStorage.getItem(PIN_KEY) || '1234';
       const cards = await migrateLegacyCardsIfNeeded();
       state.cards = cards;
+    }
+
+    function persistEasyOverrides() {
+      localStorage.setItem(EASY_OVERRIDES_KEY, JSON.stringify(state.easyOverrides));
     }
 
     function showScreen(name) {
@@ -276,8 +342,56 @@
     function updateModeUI() {
       nodes.modeBadge.textContent = state.mode === 'child' ? 'Child mode' : 'Parent mode';
       nodes.hiddenExitBtn.style.display = state.mode === 'child' ? 'block' : 'none';
-      if (state.mode === 'child') showScreen('practice');
-      if (state.mode === 'parent') showScreen('home');
+      if (state.mode === 'child') {
+        showScreen('practice');
+        enforceChildFullscreen();
+      } else {
+        nodes.fsBanner.classList.remove('show');
+        showScreen('home');
+      }
+    }
+
+    async function requestFullscreenSafe() {
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch {}
+    }
+
+    function enforceChildFullscreen() {
+      if (state.mode !== 'child') return;
+      if (document.fullscreenElement) {
+        nodes.fsBanner.classList.remove('show');
+        return;
+      }
+      nodes.fsBanner.classList.add('show');
+      requestFullscreenSafe().finally(() => {
+        if (document.fullscreenElement) nodes.fsBanner.classList.remove('show');
+      });
+    }
+
+    function installChildNavigationLock() {
+      if (state.navLockInstalled) return;
+      state.navLockInstalled = true;
+
+      window.addEventListener('keydown', (e) => {
+        if (state.mode !== 'child') return;
+        const k = (e.key || '').toLowerCase();
+        const blockRefresh = k === 'f5' || ((e.ctrlKey || e.metaKey) && k === 'r');
+        if (blockRefresh) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
+
+      window.addEventListener('popstate', () => {
+        if (state.mode === 'child') {
+          history.pushState({ childLock: true }, '', location.href);
+        }
+      });
+
+      history.pushState({ childLock: true }, '', location.href);
     }
 
     async function playAudio(audioUrl) {
@@ -291,6 +405,43 @@
       } catch {
         return false;
       }
+    }
+
+    function getSessionCards() {
+      if (state.childSessionType !== 'easy') return state.cards;
+      return EASY_CARDS.map((card) => ({
+        ...card,
+        audioUrl: state.easyOverrides[card.id] || card.audioUrl
+      }));
+    }
+
+    function currentSessionCard() {
+      const cards = getSessionCards();
+      return cards[state.index];
+    }
+
+    async function speakText(text) {
+      if (!('speechSynthesis' in window) || !text) return false;
+      return new Promise((resolve) => {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'sr-RS';
+        utter.rate = 0.9;
+        utter.onend = () => resolve(true);
+        utter.onerror = () => resolve(false);
+        try {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utter);
+        } catch {
+          resolve(false);
+        }
+      });
+    }
+
+    async function playCardSound(card) {
+      if (!card) return false;
+      if (card.audioUrl) return playAudio(card.audioUrl);
+      const fallback = card.soundText || card.word;
+      return speakText(fallback);
     }
 
     function renderCardsList() {
@@ -344,30 +495,139 @@
       });
     }
 
-    function renderPracticeCard() {
-      const card = state.cards[state.index];
+    function renderEasyOverrideUI() {
+      nodes.easyCardSelect.innerHTML = EASY_CARDS.map((c) => `<option value="${c.id}">${c.word}</option>`).join('');
+      nodes.easyRecordBtn.disabled = false;
+      nodes.easyStopBtn.disabled = true;
+      nodes.easyPlayBtn.disabled = true;
+      setStatus(nodes.easyStatus, 'Izaberi easy karticu i audio fajl za override.', '');
+    }
+
+    function selectedEasyCard() {
+      const id = nodes.easyCardSelect.value;
+      return EASY_CARDS.find((c) => c.id === id) || EASY_CARDS[0];
+    }
+
+    async function saveEasyOverride() {
+      const card = selectedEasyCard();
+      const file = nodes.easyAudioInput.files[0];
       if (!card) return;
-      nodes.progress.textContent = `Kartica ${state.index + 1} / ${state.cards.length}`;
+      if (!file && !state.easyRecordedAudioUrl) {
+        setStatus(nodes.easyStatus, 'Izaberi audio fajl ili snimi override zvuk.', 'warn');
+        return;
+      }
+      try {
+        const audioData = state.easyRecordedAudioUrl || await toDataURL(file);
+        state.easyOverrides[card.id] = audioData;
+        persistEasyOverrides();
+        nodes.easyAudioInput.value = '';
+        state.easyRecordedAudioUrl = '';
+        nodes.easyPlayBtn.disabled = true;
+        setStatus(nodes.easyStatus, `Override sačuvan za "${card.word}".`, 'ok');
+      } catch {
+        setStatus(nodes.easyStatus, 'Ne mogu da učitam audio fajl.', 'warn');
+      }
+    }
+
+    function clearEasyOverride() {
+      const card = selectedEasyCard();
+      if (!card) return;
+      if (!state.easyOverrides[card.id]) {
+        setStatus(nodes.easyStatus, `Za "${card.word}" nema override zvuka.`, 'warn');
+        return;
+      }
+      delete state.easyOverrides[card.id];
+      persistEasyOverrides();
+      setStatus(nodes.easyStatus, `Override uklonjen za "${card.word}".`, 'ok');
+    }
+
+    async function previewEasySound() {
+      const card = selectedEasyCard();
+      if (!card) return;
+      const effective = { ...card, audioUrl: state.easyOverrides[card.id] || card.audioUrl };
+      const played = await playCardSound(effective);
+      setStatus(nodes.easyStatus, played ? `Puštam zvuk za "${card.word}".` : `Ne mogu da pustim zvuk za "${card.word}".`, played ? 'ok' : 'warn');
+    }
+
+    async function startEasyRecording() {
+      if (!navigator.mediaDevices || !window.MediaRecorder) {
+        setStatus(nodes.easyStatus, 'Snimanje nije podržano na ovom browseru.', 'warn');
+        return;
+      }
+      if (state.easyMediaRecorder && state.easyMediaRecorder.state === 'recording') {
+        setStatus(nodes.easyStatus, 'Snimanje je već aktivno.', 'warn');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        state.easyRecordChunks = [];
+        let options = undefined;
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) options = { mimeType: 'audio/webm;codecs=opus' };
+        else if (MediaRecorder.isTypeSupported('audio/webm')) options = { mimeType: 'audio/webm' };
+        else if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
+        state.easyMediaRecorder = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
+        state.easyMediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) state.easyRecordChunks.push(e.data); };
+        state.easyMediaRecorder.onstop = async () => {
+          const outType = (options && options.mimeType) || 'audio/webm';
+          const blob = new Blob(state.easyRecordChunks, { type: outType });
+          state.easyRecordedAudioUrl = await toDataURL(blob);
+          nodes.easyRecordBtn.disabled = false;
+          nodes.easyStopBtn.disabled = true;
+          nodes.easyPlayBtn.disabled = false;
+          stream.getTracks().forEach((t) => t.stop());
+          setStatus(nodes.easyStatus, 'Easy override snimak je spreman.', 'ok');
+        };
+        state.easyMediaRecorder.start();
+        nodes.easyRecordBtn.disabled = true;
+        nodes.easyStopBtn.disabled = false;
+        nodes.easyPlayBtn.disabled = true;
+        setStatus(nodes.easyStatus, 'Snimanje easy override zvuka...', '');
+      } catch {
+        setStatus(nodes.easyStatus, 'Mikrofon nije odobren.', 'warn');
+      }
+    }
+
+    function stopEasyRecording() {
+      if (state.easyMediaRecorder && state.easyMediaRecorder.state !== 'inactive') state.easyMediaRecorder.stop();
+    }
+
+    function renderPracticeCard() {
+      const card = currentSessionCard();
+      if (!card) return;
+      const sessionCards = getSessionCards();
+      nodes.progress.textContent = `Kartica ${state.index + 1} / ${sessionCards.length}`;
       nodes.practiceImage.src = card.imageUrl;
       nodes.practiceWord.textContent = card.word;
       nodes.practiceSyllables.textContent = card.syllables;
-      setStatus(nodes.practiceStatus, `<span class="listen-dot"></span>Slušam: reci jasno "${card.word}"`, '');
+      if (state.childSessionType === 'easy') {
+        nodes.tapNote.textContent = 'Dodirni karticu da čuješ zvuk, pa klikni Dalje.';
+        nodes.nextEasyRow.style.display = 'flex';
+        nodes.nextEasyBtn.disabled = !state.listenedCurrent;
+        setStatus(nodes.practiceStatus, 'Easy mode: dete sluša i uči bez obaveznog izgovora.', '');
+      } else {
+        nodes.tapNote.textContent = 'Dodirni karticu da pustiš snimljeni zvuk.';
+        nodes.nextEasyRow.style.display = 'none';
+        setStatus(nodes.practiceStatus, `<span class="listen-dot"></span>Slušam: reci jasno "${card.word}"`, '');
+      }
     }
 
     function showRewardThenNext() {
+      const sessionCards = getSessionCards();
       nodes.rewardOverlay.classList.add('show');
       setTimeout(() => {
         nodes.rewardOverlay.classList.remove('show');
-        state.index = (state.index + 1) % state.cards.length;
+        state.index = (state.index + 1) % sessionCards.length;
+        state.listenedCurrent = false;
         state.advancing = false;
         renderPracticeCard();
-        restartListening();
+        if (state.childSessionType === 'speech') restartListening();
       }, 850);
     }
 
     function onRecognized(transcript) {
       if (state.advancing) return;
-      const card = state.cards[state.index];
+      const card = currentSessionCard();
+      if (!card) return;
       const rec = normalizeWord(transcript);
       const target = normalizeWord(card.word);
       if (rec === target) {
@@ -387,7 +647,7 @@
     }
 
     function restartListening() {
-      if (state.mode !== 'child') return;
+      if (state.mode !== 'child' || state.childSessionType !== 'speech') return;
       if (!SR) {
         setStatus(nodes.practiceStatus, 'Speech recognition nije podržan na ovom browseru.', 'warn');
         return;
@@ -405,7 +665,7 @@
       };
       state.recognition.onend = () => {
         state.listening = false;
-        if (state.mode === 'child' && !state.advancing) setTimeout(restartListening, 250);
+        if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing) setTimeout(restartListening, 250);
       };
       try { state.recognition.start(); } catch { setTimeout(restartListening, 350); }
     }
@@ -499,29 +759,42 @@
       setStatus(nodes.addStatus, 'Kartica je sačuvana trajno na uređaju.', 'ok');
     }
 
-    function enterChildMode() {
-      if (!state.cards.length) { setStatus(nodes.addStatus, 'Dodaj bar jednu karticu.', 'warn'); return; }
+    function enterChildMode(sessionType) {
+      if (sessionType === 'speech' && !state.cards.length) {
+        setStatus(nodes.addStatus, 'Dodaj bar jednu karticu za speech mode.', 'warn');
+        return;
+      }
       state.mode = 'child';
+      state.childSessionType = sessionType;
       localStorage.setItem(MODE_KEY, state.mode);
+      localStorage.setItem(SESSION_TYPE_KEY, state.childSessionType);
       state.index = 0;
       state.advancing = false;
+      state.listenedCurrent = false;
       updateModeUI();
+      installChildNavigationLock();
       renderPracticeCard();
-      restartListening();
-      document.documentElement.requestFullscreen?.().catch(() => {});
+      if (state.childSessionType === 'speech') restartListening();
+      requestFullscreenSafe();
     }
 
     function exitToParent() {
       stopListening();
       state.mode = 'parent';
+      state.childSessionType = 'speech';
       localStorage.setItem(MODE_KEY, state.mode);
+      localStorage.setItem(SESSION_TYPE_KEY, state.childSessionType);
       nodes.pinModal.classList.remove('show');
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
       updateModeUI();
     }
 
     function startExitHold() {
       if (state.mode !== 'child') return;
       clearTimeout(state.holdTimer);
+      setStatus(nodes.practiceStatus, 'Drži skriveno dugme 5 sekundi za unlock.', 'warn');
       state.holdTimer = setTimeout(() => {
         nodes.pinModal.classList.add('show');
         nodes.pinInput.value = '';
@@ -535,7 +808,18 @@
     }
 
     function bind() {
-      nodes.startChildBtn.addEventListener('click', enterChildMode);
+      nodes.startSpeechModeBtn.addEventListener('click', () => enterChildMode('speech'));
+      nodes.startEasyModeBtn.addEventListener('click', () => enterChildMode('easy'));
+      nodes.easyRecordBtn.addEventListener('click', startEasyRecording);
+      nodes.easyStopBtn.addEventListener('click', stopEasyRecording);
+      nodes.easyPlayBtn.addEventListener('click', async () => {
+        if (!state.easyRecordedAudioUrl) return;
+        const played = await playAudio(state.easyRecordedAudioUrl);
+        setStatus(nodes.easyStatus, played ? 'Puštam easy override snimak.' : 'Ne mogu da pustim easy override snimak.', played ? 'ok' : 'warn');
+      });
+      nodes.saveEasyOverrideBtn.addEventListener('click', saveEasyOverride);
+      nodes.clearEasyOverrideBtn.addEventListener('click', clearEasyOverride);
+      nodes.previewEasyOverrideBtn.addEventListener('click', previewEasySound);
       nodes.saveCardBtn.addEventListener('click', saveCard);
       nodes.recordBtn.addEventListener('click', startRecording);
       nodes.stopBtn.addEventListener('click', stopRecording);
@@ -546,20 +830,32 @@
       });
 
       nodes.tapCard.addEventListener('click', async () => {
-        const card = state.cards[state.index];
-        if (!card || !card.audioUrl) {
-          setStatus(nodes.practiceStatus, 'Ova kartica nema snimljen zvuk.', 'warn');
+        const card = currentSessionCard();
+        const played = await playCardSound(card);
+        if (!played) {
+          setStatus(nodes.practiceStatus, 'Ne mogu da pustim zvuk kartice.', 'warn');
           return;
         }
-        const played = await playAudio(card.audioUrl);
-        if (!played) setStatus(nodes.practiceStatus, 'Ne mogu da pustim snimljeni zvuk kartice.', 'warn');
+        if (state.childSessionType === 'easy') {
+          state.listenedCurrent = true;
+          nodes.nextEasyBtn.disabled = false;
+          setStatus(nodes.practiceStatus, `Easy mode: odslušano "${card.word}". Klikni Dalje.`, 'ok');
+        }
       });
 
-      nodes.hiddenExitBtn.addEventListener('mousedown', startExitHold);
-      nodes.hiddenExitBtn.addEventListener('touchstart', startExitHold, { passive: true });
-      nodes.hiddenExitBtn.addEventListener('mouseup', cancelExitHold);
-      nodes.hiddenExitBtn.addEventListener('mouseleave', cancelExitHold);
-      nodes.hiddenExitBtn.addEventListener('touchend', cancelExitHold);
+      nodes.nextEasyBtn.addEventListener('click', () => {
+        if (state.childSessionType !== 'easy' || !state.listenedCurrent) return;
+        showRewardThenNext();
+      });
+
+      nodes.hiddenExitBtn.addEventListener('pointerdown', startExitHold);
+      nodes.hiddenExitBtn.addEventListener('pointerup', cancelExitHold);
+      nodes.hiddenExitBtn.addEventListener('pointercancel', cancelExitHold);
+
+      nodes.fsRetryBtn.addEventListener('click', () => requestFullscreenSafe());
+      document.addEventListener('fullscreenchange', () => {
+        if (state.mode === 'child') enforceChildFullscreen();
+      });
 
       nodes.pinConfirmBtn.addEventListener('click', () => {
         if (nodes.pinInput.value === state.pin) exitToParent();
@@ -579,10 +875,10 @@
         state.cards = [...defaults];
         setStatus(nodes.addStatus, 'Storage nije dostupan, koristim privremene kartice.', 'warn');
       }
-      state.mode = 'parent';
-      localStorage.setItem(MODE_KEY, 'parent');
       bind();
+      installChildNavigationLock();
       renderCardsList();
+      renderEasyOverrideUI();
       updateModeUI();
       if (state.mode === 'child') {
         renderPracticeCard();
