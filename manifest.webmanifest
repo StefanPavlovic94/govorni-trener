@@ -1,0 +1,9 @@
+﻿{
+  "name": "Govorni trener",
+  "short_name": "Govor",
+  "start_url": "./govorni-trener-mobile-preview.html",
+  "display": "standalone",
+  "background_color": "#fff7ef",
+  "theme_color": "#ef6d2f",
+  "lang": "sr"
+}

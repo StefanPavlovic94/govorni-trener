@@ -1,0 +1,600 @@
+﻿<!doctype html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ef6d2f" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <title>Govorni trener</title>
+  <style>
+    :root { --ink:#2b1d17; --line:#edd7c8; --card:#fff; --bg:#fff7ef; --ok:#17a25a; --warn:#efaa1f; --cta:#ef6d2f; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:linear-gradient(140deg,#fff9f1,#ffe2cf); color:var(--ink); font-family:"Trebuchet MS","Segoe UI",sans-serif; }
+    .app { max-width:470px; margin:0 auto; min-height:100vh; padding:14px; }
+    .screen { display:none; }
+    .screen.active { display:block; }
+    .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .mode { background:#fff0e2; border:1px solid #efc9af; border-radius:999px; padding:6px 10px; font-weight:800; font-size:12px; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 24px rgba(80,40,20,.12); padding:12px; }
+    .panel + .panel { margin-top:10px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .row > * { flex:1 1 0; }
+    .btn { border:0; border-radius:12px; padding:12px 10px; font-weight:800; cursor:pointer; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .pri { background:var(--cta); color:#fff; }
+    .mut { background:#fff5ee; border:1px solid #eacfbf; color:#7f5543; }
+    .ok { background:var(--ok); color:#fff; }
+    .warn { background:var(--warn); color:#fff; }
+    .title { margin:0 0 8px; font-size:18px; }
+    .hint { margin:0; font-size:12px; color:#88685a; font-weight:700; }
+    label { display:block; margin:8px 0 4px; font-size:13px; color:#7f6153; font-weight:800; }
+    input, textarea { width:100%; border:1px solid #e8ccb8; border-radius:10px; padding:9px; font:inherit; }
+    textarea { min-height:70px; }
+    .status { margin-top:8px; padding:9px; border-radius:10px; border:1px solid #ecd7c8; background:#fff9f4; font-weight:800; min-height:40px; }
+    .list { display:grid; gap:8px; max-height:36vh; overflow:auto; }
+    .item { display:flex; align-items:center; gap:8px; background:#fff8f2; border:1px solid #f0dbc9; border-radius:12px; padding:8px; }
+    .item-main { flex:1; display:flex; align-items:center; gap:8px; border:0; background:transparent; padding:0; cursor:pointer; text-align:left; }
+    .del-btn { max-width:86px; border:1px solid #e7bfa8; background:#fff0e4; color:#8a4a2e; border-radius:10px; padding:8px 10px; font-weight:800; cursor:pointer; }
+    .thumb { width:54px; height:54px; border-radius:10px; object-fit:cover; background:#ffe0ca; }
+    .w { margin:0; font-size:18px; line-height:1; }
+    .sy { margin:2px 0 0; color:#9e6a52; font-weight:800; font-size:14px; }
+
+    .practice-wrap { min-height:calc(100vh - 28px); display:grid; place-items:center; }
+    .practice-card { width:100%; background:#fff; border:1px solid var(--line); border-radius:22px; padding:14px; box-shadow:0 10px 24px rgba(80,40,20,.14); }
+    .progress { margin:0 0 8px; color:#8f6651; font-weight:800; font-size:14px; }
+    .tap-note { margin:0 0 8px; color:#7f6256; font-weight:700; font-size:13px; }
+    .big-card { border:0; width:100%; background:transparent; padding:0; cursor:pointer; text-align:unset; }
+    .img { width:100%; height:260px; object-fit:cover; border-radius:16px; border:1px solid #efd8ca; background:#ffe7d4; display:block; }
+    .word { margin:10px 0 0; text-align:center; font-size:42px; font-weight:900; }
+    .syll { margin:2px 0 8px; text-align:center; color:#bf5f36; font-size:24px; font-weight:900; letter-spacing:.8px; }
+    .listen-dot { display:inline-block; width:10px; height:10px; border-radius:99px; background:#d8602f; margin-right:6px; animation:pulse .9s ease infinite; }
+    @keyframes pulse { from { transform:scale(.9); opacity:.6; } to { transform:scale(1.2); opacity:1; } }
+
+    .overlay { position:fixed; inset:0; display:none; place-items:center; text-align:center; padding:20px; z-index:15; color:#fff; }
+    .overlay.show { display:grid; }
+    .reward { background:rgba(22,152,88,.94); }
+    .star { font-size:82px; animation:pop .5s ease infinite alternate; }
+    @keyframes pop { from { transform:scale(.92); } to { transform:scale(1.08); } }
+
+    .hidden-exit { position:fixed; right:8px; bottom:8px; width:58px; height:58px; border-radius:999px; border:0; background:rgba(30,20,16,.08); color:transparent; z-index:20; }
+
+    .pin-modal { position:fixed; inset:0; background:rgba(32,22,18,.72); display:none; place-items:center; z-index:25; padding:14px; }
+    .pin-modal.show { display:grid; }
+    .pin-card { width:100%; max-width:340px; background:#fff; border-radius:16px; border:1px solid #ebd5c8; padding:12px; }
+    .pin-card h3 { margin:0 0 8px; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="homeScreen" class="screen active">
+      <div class="head">
+        <h1 style="margin:0;font-size:22px;">Govorni trener</h1>
+        <div id="modeBadge" class="mode">Parent mode</div>
+      </div>
+
+      <div class="panel">
+        <h2 class="title">Pokreni Child mode</h2>
+        <div class="row"><button id="startChildBtn" type="button" class="btn pri">Počni sesiju</button></div>
+        <p class="hint">U child modu izlaz je zaključan: skriveno dugme 10s + PIN.</p>
+      </div>
+
+      <div class="panel">
+        <h2 class="title">Dodaj karticu</h2>
+        <label for="wordInput">Reč</label>
+        <input id="wordInput" placeholder="npr. Mama" />
+
+        <label for="syllablesInput">Slogovi</label>
+        <input id="syllablesInput" placeholder="npr. MA-MA" />
+
+        <label for="imageInput">Slika</label>
+        <input id="imageInput" type="file" accept="image/*" />
+
+        <label>Snimanje zvuka</label>
+        <div class="row">
+          <button id="recordBtn" class="btn warn" type="button">Snimaj</button>
+          <button id="stopBtn" class="btn mut" type="button" disabled>Stop</button>
+          <button id="playRecordedBtn" class="btn mut" type="button" disabled>Pusti</button>
+        </div>
+
+        <label for="audioInput">Ili učitaj audio fajl</label>
+        <input id="audioInput" type="file" accept="audio/*" />
+
+        <div id="addStatus" class="status">Dodaj podatke kartice pa sačuvaj.</div>
+        <div class="row" style="margin-top:8px;"><button id="saveCardBtn" type="button" class="btn ok">Sačuvaj karticu</button></div>
+      </div>
+
+      <div class="panel">
+        <h2 class="title">Moje kartice</h2>
+        <p class="hint">Klik na karticu pušta njen snimljeni zvuk.</p>
+        <div id="cardsList" class="list"></div>
+      </div>
+    </section>
+
+    <section id="practiceScreen" class="screen">
+      <div class="practice-wrap">
+        <div class="practice-card">
+          <p id="progress" class="progress">Kartica 1 / 1</p>
+          <p class="tap-note">Dodirni karticu da pustiš snimljeni zvuk.</p>
+          <button id="tapCard" class="big-card" type="button">
+            <img id="practiceImage" class="img" alt="kartica" />
+            <h2 id="practiceWord" class="word"></h2>
+            <p id="practiceSyllables" class="syll"></p>
+          </button>
+          <div id="practiceStatus" class="status"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section id="rewardOverlay" class="overlay reward">
+    <div>
+      <div class="star">⭐</div>
+      <h2 style="margin:4px 0 0;font-size:34px;">Bravo!</h2>
+    </div>
+  </section>
+
+  <button id="hiddenExitBtn" class="hidden-exit" aria-label="exit-child"></button>
+
+  <section id="pinModal" class="pin-modal">
+    <div class="pin-card">
+      <h3>Unesi roditeljski PIN</h3>
+      <p class="hint" style="margin-bottom:8px;">MVP PIN je 1234</p>
+      <input id="pinInput" type="password" inputmode="numeric" placeholder="PIN" />
+      <div class="row" style="margin-top:8px;">
+        <button id="pinConfirmBtn" class="btn pri">Potvrdi</button>
+        <button id="pinCancelBtn" class="btn mut">Otkaži</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const DB_NAME = 'govorni_trener_db';
+    const DB_VERSION = 1;
+    const CARDS_STORE = 'cards';
+    const LEGACY_CARDS_KEY = 'gt_cards_v2';
+    const MODE_KEY = 'gt_mode_v2';
+    const PIN_KEY = 'gt_pin_v2';
+    const EXIT_HOLD_MS = 10000;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const defaultImg = (emoji) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='600' height='420'><rect width='100%' height='100%' fill='#ffe5d1'/><text x='50%' y='56%' dominant-baseline='middle' text-anchor='middle' font-size='180'>${emoji}</text></svg>`)}`;
+    const defaults = [
+      { id:'1', word:'Mama', syllables:'MA-MA', imageUrl:defaultImg('👩'), audioUrl:'' },
+      { id:'2', word:'Voda', syllables:'VO-DA', imageUrl:defaultImg('💧'), audioUrl:'' },
+      { id:'3', word:'Tata', syllables:'TA-TA', imageUrl:defaultImg('👨'), audioUrl:'' }
+    ];
+
+    const state = {
+      cards: [], mode: 'parent', pin: '1234', index: 0,
+      recognition: null, listening: false, advancing: false,
+      holdTimer: null, mediaRecorder: null, recordChunks: [], recordedAudioUrl: '', activeAudio: null,
+      db: null
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const nodes = {
+      homeScreen: $('homeScreen'), practiceScreen: $('practiceScreen'), modeBadge: $('modeBadge'),
+      startChildBtn: $('startChildBtn'), wordInput: $('wordInput'), syllablesInput: $('syllablesInput'), imageInput: $('imageInput'), audioInput: $('audioInput'),
+      recordBtn: $('recordBtn'), stopBtn: $('stopBtn'), playRecordedBtn: $('playRecordedBtn'), saveCardBtn: $('saveCardBtn'), addStatus: $('addStatus'),
+      cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceSyllables: $('practiceSyllables'), practiceStatus: $('practiceStatus'),
+      rewardOverlay: $('rewardOverlay'), hiddenExitBtn: $('hiddenExitBtn'), pinModal: $('pinModal'), pinInput: $('pinInput'), pinConfirmBtn: $('pinConfirmBtn'), pinCancelBtn: $('pinCancelBtn')
+    };
+
+    function normalizeWord(text) {
+      return (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function setStatus(target, message, tone) {
+      target.className = 'status';
+      if (tone === 'ok') target.classList.add('ok');
+      if (tone === 'warn') target.classList.add('warn');
+      target.innerHTML = message;
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(CARDS_STORE)) {
+            db.createObjectStore(CARDS_STORE, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbGetAllCards() {
+      return new Promise((resolve, reject) => {
+        const tx = state.db.transaction(CARDS_STORE, 'readonly');
+        const store = tx.objectStore(CARDS_STORE);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbPutCard(card) {
+      return new Promise((resolve, reject) => {
+        const tx = state.db.transaction(CARDS_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(CARDS_STORE).put(card);
+      });
+    }
+
+    function dbDeleteCard(cardId) {
+      return new Promise((resolve, reject) => {
+        const tx = state.db.transaction(CARDS_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(CARDS_STORE).delete(cardId);
+      });
+    }
+
+    async function migrateLegacyCardsIfNeeded() {
+      const existing = await dbGetAllCards();
+      if (existing.length > 0) return existing;
+
+      let legacyCards = [];
+      try {
+        const parsed = JSON.parse(localStorage.getItem(LEGACY_CARDS_KEY) || 'null');
+        legacyCards = Array.isArray(parsed) ? parsed : [];
+      } catch {}
+
+      const seed = legacyCards.length > 0 ? legacyCards : defaults;
+      for (const card of seed) {
+        await dbPutCard({
+          id: String(card.id || Date.now() + Math.random()),
+          word: card.word || 'Reč',
+          syllables: card.syllables || '',
+          imageUrl: card.imageUrl || defaultImg('🧩'),
+          audioUrl: card.audioUrl || ''
+        });
+      }
+      return dbGetAllCards();
+    }
+
+    async function loadState() {
+      state.db = await openDB();
+      const mode = localStorage.getItem(MODE_KEY);
+      if (mode === 'parent') state.mode = 'parent';
+      else state.mode = 'parent';
+      state.pin = localStorage.getItem(PIN_KEY) || '1234';
+      const cards = await migrateLegacyCardsIfNeeded();
+      state.cards = cards;
+    }
+
+    function showScreen(name) {
+      nodes.homeScreen.classList.remove('active');
+      nodes.practiceScreen.classList.remove('active');
+      if (name === 'home') nodes.homeScreen.classList.add('active');
+      if (name === 'practice') nodes.practiceScreen.classList.add('active');
+    }
+
+    function updateModeUI() {
+      nodes.modeBadge.textContent = state.mode === 'child' ? 'Child mode' : 'Parent mode';
+      nodes.hiddenExitBtn.style.display = state.mode === 'child' ? 'block' : 'none';
+      if (state.mode === 'child') showScreen('practice');
+      if (state.mode === 'parent') showScreen('home');
+    }
+
+    async function playAudio(audioUrl) {
+      if (!audioUrl) return false;
+      if (state.activeAudio) { state.activeAudio.pause(); state.activeAudio.currentTime = 0; }
+      const audio = new Audio(audioUrl);
+      state.activeAudio = audio;
+      try {
+        await audio.play();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function renderCardsList() {
+      nodes.cardsList.innerHTML = '';
+      if (!state.cards.length) {
+        const d = document.createElement('div'); d.className = 'item'; d.textContent = 'Nema kartica.';
+        nodes.cardsList.appendChild(d); return;
+      }
+      state.cards.forEach((card, idx) => {
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.innerHTML = `
+          <button type="button" class="item-main">
+            <img class="thumb" src="${card.imageUrl}" alt="${card.word}">
+            <div style="flex:1;text-align:left;">
+              <p class="w">${card.word}</p>
+              <p class="sy">${card.syllables}</p>
+            </div>
+          </button>
+          <button type="button" class="del-btn">Obriši</button>
+        `;
+        const playBtn = row.querySelector('.item-main');
+        const deleteBtn = row.querySelector('.del-btn');
+
+        playBtn.addEventListener('click', async () => {
+          state.index = idx;
+          if (card.audioUrl) {
+            const played = await playAudio(card.audioUrl);
+            if (played) setStatus(nodes.addStatus, `Puštam audio za "${card.word}".`, 'ok');
+            else setStatus(nodes.addStatus, `Ne mogu da pustim audio za "${card.word}".`, 'warn');
+          } else {
+            setStatus(nodes.addStatus, `Kartica "${card.word}" nema snimljen zvuk.`, 'warn');
+          }
+        });
+
+        deleteBtn.addEventListener('click', async () => {
+          const confirmed = window.confirm(`Obriši karticu "${card.word}"?`);
+          if (!confirmed) return;
+          try {
+            await dbDeleteCard(card.id);
+            state.cards = state.cards.filter((c) => c.id !== card.id);
+            if (state.index >= state.cards.length) state.index = 0;
+            renderCardsList();
+            setStatus(nodes.addStatus, `Kartica "${card.word}" je obrisana.`, 'ok');
+          } catch {
+            setStatus(nodes.addStatus, 'Brisanje nije uspelo. Probaj ponovo.', 'warn');
+          }
+        });
+
+        nodes.cardsList.appendChild(row);
+      });
+    }
+
+    function renderPracticeCard() {
+      const card = state.cards[state.index];
+      if (!card) return;
+      nodes.progress.textContent = `Kartica ${state.index + 1} / ${state.cards.length}`;
+      nodes.practiceImage.src = card.imageUrl;
+      nodes.practiceWord.textContent = card.word;
+      nodes.practiceSyllables.textContent = card.syllables;
+      setStatus(nodes.practiceStatus, `<span class="listen-dot"></span>Slušam: reci jasno "${card.word}"`, '');
+    }
+
+    function showRewardThenNext() {
+      nodes.rewardOverlay.classList.add('show');
+      setTimeout(() => {
+        nodes.rewardOverlay.classList.remove('show');
+        state.index = (state.index + 1) % state.cards.length;
+        state.advancing = false;
+        renderPracticeCard();
+        restartListening();
+      }, 850);
+    }
+
+    function onRecognized(transcript) {
+      if (state.advancing) return;
+      const card = state.cards[state.index];
+      const rec = normalizeWord(transcript);
+      const target = normalizeWord(card.word);
+      if (rec === target) {
+        state.advancing = true;
+        setStatus(nodes.practiceStatus, `Prepoznato: "${transcript}". Uspešno!`, 'ok');
+        showRewardThenNext();
+      } else {
+        setStatus(nodes.practiceStatus, `Čuo sam: "${transcript}". Probaj ponovo: "${card.word}".`, 'warn');
+      }
+    }
+
+    function stopListening() {
+      if (state.recognition && state.listening) {
+        try { state.recognition.stop(); } catch {}
+      }
+      state.listening = false;
+    }
+
+    function restartListening() {
+      if (state.mode !== 'child') return;
+      if (!SR) {
+        setStatus(nodes.practiceStatus, 'Speech recognition nije podržan na ovom browseru.', 'warn');
+        return;
+      }
+      stopListening();
+      state.recognition = new SR();
+      state.recognition.lang = 'sr-RS';
+      state.recognition.interimResults = false;
+      state.recognition.maxAlternatives = 1;
+      state.recognition.continuous = false;
+      state.recognition.onstart = () => { state.listening = true; };
+      state.recognition.onresult = (e) => onRecognized(e.results[0][0].transcript || '');
+      state.recognition.onerror = () => {
+        if (!state.advancing) setStatus(nodes.practiceStatus, 'Nisam razumeo pokušaj. Slušam ponovo...', 'warn');
+      };
+      state.recognition.onend = () => {
+        state.listening = false;
+        if (state.mode === 'child' && !state.advancing) setTimeout(restartListening, 250);
+      };
+      try { state.recognition.start(); } catch { setTimeout(restartListening, 350); }
+    }
+
+    async function toDataURL(fileOrBlob) {
+      return await new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || ''));
+        fr.onerror = reject;
+        fr.readAsDataURL(fileOrBlob);
+      });
+    }
+
+    async function startRecording() {
+      if (!navigator.mediaDevices || !window.MediaRecorder) {
+        setStatus(nodes.addStatus, 'Snimanje nije podržano na ovom browseru.', 'warn');
+        return;
+      }
+      if (state.mediaRecorder && state.mediaRecorder.state === 'recording') {
+        setStatus(nodes.addStatus, 'Snimanje je već aktivno.', 'warn');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        state.recordChunks = [];
+        let options = undefined;
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) options = { mimeType: 'audio/webm;codecs=opus' };
+        else if (MediaRecorder.isTypeSupported('audio/webm')) options = { mimeType: 'audio/webm' };
+        else if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
+        state.mediaRecorder = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
+        state.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) state.recordChunks.push(e.data); };
+        state.mediaRecorder.onstop = async () => {
+          const outType = (options && options.mimeType) || 'audio/webm';
+          const blob = new Blob(state.recordChunks, { type: outType });
+          state.recordedAudioUrl = await toDataURL(blob);
+          nodes.playRecordedBtn.disabled = false;
+          nodes.recordBtn.disabled = false;
+          nodes.stopBtn.disabled = true;
+          stream.getTracks().forEach((t) => t.stop());
+          setStatus(nodes.addStatus, 'Snimak je spreman.', 'ok');
+        };
+        state.mediaRecorder.start();
+        nodes.recordBtn.disabled = true;
+        nodes.stopBtn.disabled = false;
+        setStatus(nodes.addStatus, 'Snimanje u toku...', '');
+      } catch {
+        setStatus(nodes.addStatus, 'Mikrofon nije odobren.', 'warn');
+      }
+    }
+
+    function stopRecording() {
+      if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') state.mediaRecorder.stop();
+    }
+
+    async function saveCard() {
+      const word = nodes.wordInput.value.trim();
+      const syllables = nodes.syllablesInput.value.trim();
+      const imageFile = nodes.imageInput.files[0];
+      const audioFile = nodes.audioInput.files[0];
+      if (!word || !syllables) { setStatus(nodes.addStatus, 'Reč i slogovi su obavezni.', 'warn'); return; }
+      if (!imageFile) { setStatus(nodes.addStatus, 'Dodaj sliku kartice.', 'warn'); return; }
+
+      let imageUrl = '';
+      let audioUrl = state.recordedAudioUrl || '';
+      try {
+        imageUrl = await toDataURL(imageFile);
+        if (audioFile) audioUrl = await toDataURL(audioFile);
+      } catch {
+        setStatus(nodes.addStatus, 'Greška pri čitanju fajla.', 'warn');
+        return;
+      }
+
+      if (!audioUrl) { setStatus(nodes.addStatus, 'Dodaj ili snimi zvuk kartice.', 'warn'); return; }
+
+      const newCard = { id: `${Date.now()}_${Math.random().toString(16).slice(2, 7)}`, word, syllables, imageUrl, audioUrl };
+      try {
+        await dbPutCard(newCard);
+      } catch {
+        setStatus(nodes.addStatus, 'Čuvanje kartice nije uspelo (storage).', 'warn');
+        return;
+      }
+      state.cards.push(newCard);
+      renderCardsList();
+
+      nodes.wordInput.value = '';
+      nodes.syllablesInput.value = '';
+      nodes.imageInput.value = '';
+      nodes.audioInput.value = '';
+      state.recordedAudioUrl = '';
+      nodes.playRecordedBtn.disabled = true;
+      setStatus(nodes.addStatus, 'Kartica je sačuvana trajno na uređaju.', 'ok');
+    }
+
+    function enterChildMode() {
+      if (!state.cards.length) { setStatus(nodes.addStatus, 'Dodaj bar jednu karticu.', 'warn'); return; }
+      state.mode = 'child';
+      localStorage.setItem(MODE_KEY, state.mode);
+      state.index = 0;
+      state.advancing = false;
+      updateModeUI();
+      renderPracticeCard();
+      restartListening();
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+
+    function exitToParent() {
+      stopListening();
+      state.mode = 'parent';
+      localStorage.setItem(MODE_KEY, state.mode);
+      nodes.pinModal.classList.remove('show');
+      updateModeUI();
+    }
+
+    function startExitHold() {
+      if (state.mode !== 'child') return;
+      clearTimeout(state.holdTimer);
+      state.holdTimer = setTimeout(() => {
+        nodes.pinModal.classList.add('show');
+        nodes.pinInput.value = '';
+        nodes.pinInput.focus();
+      }, EXIT_HOLD_MS);
+    }
+
+    function cancelExitHold() {
+      clearTimeout(state.holdTimer);
+      state.holdTimer = null;
+    }
+
+    function bind() {
+      nodes.startChildBtn.addEventListener('click', enterChildMode);
+      nodes.saveCardBtn.addEventListener('click', saveCard);
+      nodes.recordBtn.addEventListener('click', startRecording);
+      nodes.stopBtn.addEventListener('click', stopRecording);
+      nodes.playRecordedBtn.addEventListener('click', async () => {
+        if (!state.recordedAudioUrl) return;
+        const played = await playAudio(state.recordedAudioUrl);
+        setStatus(nodes.addStatus, played ? 'Puštam snimljeni zvuk.' : 'Ne mogu da pustim snimljeni zvuk.', played ? 'ok' : 'warn');
+      });
+
+      nodes.tapCard.addEventListener('click', async () => {
+        const card = state.cards[state.index];
+        if (!card || !card.audioUrl) {
+          setStatus(nodes.practiceStatus, 'Ova kartica nema snimljen zvuk.', 'warn');
+          return;
+        }
+        const played = await playAudio(card.audioUrl);
+        if (!played) setStatus(nodes.practiceStatus, 'Ne mogu da pustim snimljeni zvuk kartice.', 'warn');
+      });
+
+      nodes.hiddenExitBtn.addEventListener('mousedown', startExitHold);
+      nodes.hiddenExitBtn.addEventListener('touchstart', startExitHold, { passive: true });
+      nodes.hiddenExitBtn.addEventListener('mouseup', cancelExitHold);
+      nodes.hiddenExitBtn.addEventListener('mouseleave', cancelExitHold);
+      nodes.hiddenExitBtn.addEventListener('touchend', cancelExitHold);
+
+      nodes.pinConfirmBtn.addEventListener('click', () => {
+        if (nodes.pinInput.value === state.pin) exitToParent();
+        else nodes.pinInput.placeholder = 'Pogrešan PIN';
+      });
+      nodes.pinCancelBtn.addEventListener('click', () => nodes.pinModal.classList.remove('show'));
+
+      window.addEventListener('beforeunload', (e) => {
+        if (state.mode === 'child') { e.preventDefault(); e.returnValue = ''; }
+      });
+    }
+
+    async function init() {
+      try {
+        await loadState();
+      } catch {
+        state.cards = [...defaults];
+        setStatus(nodes.addStatus, 'Storage nije dostupan, koristim privremene kartice.', 'warn');
+      }
+      state.mode = 'parent';
+      localStorage.setItem(MODE_KEY, 'parent');
+      bind();
+      renderCardsList();
+      updateModeUI();
+      if (state.mode === 'child') {
+        renderPracticeCard();
+        restartListening();
+      } else {
+        setStatus(nodes.addStatus, 'Dodaj podatke kartice pa sačuvaj.', '');
+      }
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+      if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, state.pin);
+    }
+
+    init();
+  </script>
+</body>
+</html>
