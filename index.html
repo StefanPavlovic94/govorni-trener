@@ -15,6 +15,7 @@
     .screen.active { display:block; }
     .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
     .head-right { display:flex; align-items:center; gap:8px; }
+    .config-actions { display:flex; align-items:center; gap:6px; }
     .tabs { display:flex; gap:8px; margin-bottom:10px; }
     .tab-btn { flex:1; border:1px solid #eacfbf; background:#fff3e8; color:#8a573f; border-radius:12px; padding:10px; font-weight:800; cursor:pointer; }
     .tab-btn.active { background:#ef6d2f; color:#fff; border-color:#ef6d2f; }
@@ -86,6 +87,7 @@
     .launch-grid { display:grid; gap:8px; }
     .launch-row { display:grid; grid-template-columns:1fr; gap:8px; }
     .icon-btn { width:38px; height:38px; border-radius:10px; border:1px solid #eacfbf; background:#fff5ee; color:#7f5543; font-size:20px; line-height:1; font-weight:800; cursor:pointer; }
+    .mini-icon-btn { width:34px; height:34px; border-radius:10px; border:1px solid #e7c9b7; background:#fff6ee; color:#7a533f; font-size:16px; line-height:1; font-weight:800; cursor:pointer; }
     @media (max-width:360px) {
       .easy-board-grid { gap:8px; }
       .easy-board-card { padding:5px; border-radius:12px; }
@@ -133,8 +135,14 @@
     <section id="configScreen" class="screen">
       <div class="head">
         <h1 style="margin:0;font-size:22px;">Konfiguracija</h1>
-        <button id="configBackBtn" type="button" class="btn mut" style="padding:8px 10px;">Nazad</button>
+        <div class="config-actions">
+          <button id="exportBackupBtn" type="button" class="mini-icon-btn" aria-label="Izvezi backup" title="Izvezi backup (.gtb)">⤴</button>
+          <button id="importBackupBtn" type="button" class="mini-icon-btn" aria-label="Uvezi backup" title="Uvezi backup (.gtb)">⤵</button>
+          <button id="configBackBtn" type="button" class="btn mut" style="padding:8px 10px;">Nazad</button>
+        </div>
       </div>
+      <input id="importBackupInput" type="file" accept=".gtb,application/json" style="display:none;" />
+      <p id="backupStatus" class="hint" style="margin:0 0 8px; min-height:18px;"></p>
       <div class="tabs">
         <button id="tabEasyBtn" type="button" class="tab-btn active">Podešavanje lakog režima</button>
         <button id="tabSpeechBtn" type="button" class="tab-btn">Podešavanje govornog režima</button>
@@ -350,6 +358,7 @@
       tabSpeechBtn: $('tabSpeechBtn'), tabEasyBtn: $('tabEasyBtn'), speechTab: $('speechTab'), easyTab: $('easyTab'),
       openConfigBtn: $('openConfigBtn'),
       configBackBtn: $('configBackBtn'),
+      exportBackupBtn: $('exportBackupBtn'), importBackupBtn: $('importBackupBtn'), importBackupInput: $('importBackupInput'), backupStatus: $('backupStatus'),
       launchSpeechBtn: $('launchSpeechBtn'), launchEasyStandardBtn: $('launchEasyStandardBtn'), launchEasyBoardBtn: $('launchEasyBoardBtn'),
       speechConfigPanel: $('speechConfigPanel'), easyConfigPanel: $('easyConfigPanel'),
       wordInput: $('wordInput'), speechPassInput: $('speechPassInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
@@ -462,6 +471,15 @@
       });
     }
 
+    function dbClearCards() {
+      return new Promise((resolve, reject) => {
+        const tx = state.db.transaction(CARDS_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(CARDS_STORE).clear();
+      });
+    }
+
     function dbGetAllEasyCards() {
       return new Promise((resolve, reject) => {
         const tx = state.easyDb.transaction(EASY_CARDS_STORE, 'readonly');
@@ -487,6 +505,15 @@
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
         tx.objectStore(EASY_CARDS_STORE).delete(cardId);
+      });
+    }
+
+    function dbClearEasyCards() {
+      return new Promise((resolve, reject) => {
+        const tx = state.easyDb.transaction(EASY_CARDS_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(EASY_CARDS_STORE).clear();
       });
     }
 
@@ -948,6 +975,157 @@
       switchHomeTab(tab);
       const target = tab === 'speech' ? nodes.speechConfigPanel : nodes.easyConfigPanel;
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function setBackupStatus(message, tone) {
+      nodes.backupStatus.textContent = message || '';
+      nodes.backupStatus.style.color = tone === 'ok' ? '#0f7e45' : (tone === 'warn' ? '#9c5e00' : '#88685a');
+    }
+
+    function sanitizeImportedSpeechCards(cards) {
+      if (!Array.isArray(cards)) return [];
+      return cards.map((card, idx) => ({
+        id: String(card && card.id ? card.id : `sp_${Date.now()}_${idx}`),
+        word: (card && card.word ? String(card.word) : `Kartica ${idx + 1}`).trim(),
+        imageUrl: card && card.imageUrl ? String(card.imageUrl) : defaultImg('🧩'),
+        audioUrl: card && card.audioUrl ? String(card.audioUrl) : '',
+        passPhrases: Array.isArray(card && card.passPhrases) ? card.passPhrases.map((x) => String(x).trim()).filter(Boolean) : [],
+        order: Number.isFinite(card && card.order) ? Number(card.order) : idx
+      }));
+    }
+
+    function sanitizeImportedEasyCards(cards) {
+      if (!Array.isArray(cards)) return [];
+      return cards.map((card, idx) => ({
+        id: String(card && card.id ? card.id : `easy_${Date.now()}_${idx}`),
+        word: (card && card.word ? String(card.word) : `Kartica ${idx + 1}`).trim(),
+        imageUrl: card && card.imageUrl ? String(card.imageUrl) : defaultImg('🧩'),
+        audioUrl: card && card.audioUrl ? String(card.audioUrl) : '',
+        soundText: (card && card.soundText ? String(card.soundText) : (card && card.word ? String(card.word) : `Zvuk ${idx + 1}`)).trim(),
+        order: Number.isFinite(card && card.order) ? Number(card.order) : idx
+      }));
+    }
+
+    function buildBackupFileName() {
+      const d = new Date();
+      const p = (n) => String(n).padStart(2, '0');
+      const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+      return `govorni-trener-backup-${stamp}.gtb`;
+    }
+
+    async function exportBackup() {
+      try {
+        const payload = {
+          app: 'govorni-trener',
+          format: 'gtb-json',
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          settings: {
+            pin: state.pin,
+            easyVariant: state.easyVariant
+          },
+          speechCards: state.cards.map((c, idx) => ({
+            id: c.id,
+            word: c.word,
+            imageUrl: c.imageUrl,
+            audioUrl: c.audioUrl,
+            passPhrases: Array.isArray(c.passPhrases) ? c.passPhrases : [],
+            order: Number.isFinite(c.order) ? c.order : idx
+          })),
+          easyCards: state.easyCards.map((c, idx) => ({
+            id: c.id,
+            word: c.word,
+            imageUrl: c.imageUrl,
+            audioUrl: c.audioUrl,
+            soundText: c.soundText || c.word || '',
+            order: Number.isFinite(c.order) ? c.order : idx
+          }))
+        };
+        const json = JSON.stringify(payload);
+        const blob = new Blob([json], { type: 'application/govorni-trener-backup+json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = buildBackupFileName();
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        setBackupStatus('Backup je uspešno izvezen (.gtb).', 'ok');
+      } catch {
+        setBackupStatus('Izvoz backup-a nije uspeo.', 'warn');
+      }
+    }
+
+    async function importBackup(file) {
+      if (!file) return;
+      let parsed;
+      try {
+        const text = await file.text();
+        parsed = JSON.parse(text);
+      } catch {
+        setBackupStatus('Neispravan backup fajl.', 'warn');
+        return;
+      }
+
+      const importedSpeech = sortCardsByOrder(sanitizeImportedSpeechCards(parsed.speechCards));
+      const importedEasy = sortCardsByOrder(sanitizeImportedEasyCards(parsed.easyCards));
+      if (!importedSpeech.length && !importedEasy.length) {
+        setBackupStatus('Backup nema kartice za uvoz.', 'warn');
+        return;
+      }
+
+      const confirmed = window.confirm('Da li želiš da zameniš postojeće kartice sadržajem iz backup-a?');
+      if (!confirmed) return;
+
+      if (!state.dbReady) {
+        const recoveredMain = await recoverMainDBConnection();
+        if (!recoveredMain) {
+          setBackupStatus('Ne mogu da pristupim govornoj bazi.', 'warn');
+          return;
+        }
+      }
+      if (!state.easyDbReady) {
+        const recoveredEasy = await recoverDBConnection();
+        if (!recoveredEasy) {
+          setBackupStatus('Ne mogu da pristupim lakoj bazi.', 'warn');
+          return;
+        }
+      }
+
+      try {
+        await dbClearCards();
+        for (const card of importedSpeech) await dbPutCard(card);
+        await dbClearEasyCards();
+        for (const card of importedEasy) await dbPutEasyCard(card);
+      } catch {
+        setBackupStatus('Uvoz backup-a nije uspeo (baza).', 'warn');
+        return;
+      }
+
+      state.cards = importedSpeech.length ? importedSpeech : [...defaults];
+      state.easyCards = importedEasy.length ? importedEasy : [...EASY_DEFAULTS];
+      const nextPin = parsed && parsed.settings && parsed.settings.pin ? String(parsed.settings.pin) : state.pin;
+      const nextEasyVariant = parsed && parsed.settings && (parsed.settings.easyVariant === 'standard' || parsed.settings.easyVariant === 'board')
+        ? parsed.settings.easyVariant
+        : state.easyVariant;
+      state.pin = nextPin || '1234';
+      state.easyVariant = nextEasyVariant;
+      localStorage.setItem(PIN_KEY, state.pin);
+      localStorage.setItem(EASY_VARIANT_KEY, state.easyVariant);
+      state.mode = 'parent';
+      state.childSessionType = 'speech';
+      state.parentScreen = 'config';
+      localStorage.setItem(MODE_KEY, state.mode);
+      localStorage.setItem(SESSION_TYPE_KEY, state.childSessionType);
+
+      stopListening();
+      resetEasyForm();
+      renderCardsList();
+      renderEasyCardsList();
+      renderEasyBoard();
+      updateModeUI();
+      openConfigPanel('easy');
+      setBackupStatus('Backup je uspešno uvezen.', 'ok');
     }
 
     function resetEasyForm() {
@@ -1484,6 +1662,14 @@
       nodes.tabSpeechBtn.addEventListener('click', () => switchHomeTab('speech'));
       nodes.tabEasyBtn.addEventListener('click', () => switchHomeTab('easy'));
       nodes.openConfigBtn.addEventListener('click', () => openConfigPanel('easy'));
+      nodes.exportBackupBtn.addEventListener('click', exportBackup);
+      nodes.importBackupBtn.addEventListener('click', () => nodes.importBackupInput.click());
+      nodes.importBackupInput.addEventListener('change', async () => {
+        const file = nodes.importBackupInput.files && nodes.importBackupInput.files[0];
+        if (!file) return;
+        await importBackup(file);
+        nodes.importBackupInput.value = '';
+      });
       nodes.configBackBtn.addEventListener('click', () => {
         state.parentScreen = 'home';
         showScreen('home');
