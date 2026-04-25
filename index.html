@@ -97,6 +97,8 @@
           <h2 class="title">Dodaj speech karticu</h2>
           <label for="wordInput">Reč</label>
           <input id="wordInput" placeholder="npr. Mama" />
+          <label for="speechPassInput">Dovoljno za prolaz (zarezom)</label>
+          <input id="speechPassInput" placeholder="npr. Ma, Mam" />
 
 
           <label for="imageInput">Slika</label>
@@ -190,8 +192,8 @@
 
   <section id="rewardOverlay" class="overlay reward">
     <div>
-      <div class="star">⭐</div>
-      <h2 style="margin:4px 0 0;font-size:34px;">Bravo!</h2>
+      <div class="star">👏👏</div>
+      <h2 style="margin:4px 0 0;font-size:34px;">Aplauz!</h2>
     </div>
   </section>
 
@@ -238,6 +240,8 @@
     const PIN_KEY = 'gt_pin_v2';
     const EXIT_HOLD_MS = 5000;
     const EASY_NEXT_LOCK_MS = 5000;
+    const EASY_TAP_LOCK_MS = 2000;
+    const REWARD_LOCK_MS = 3000;
     const EASY_CARDS_KEY = 'gt_easy_cards_v1';
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -269,14 +273,17 @@
       db: null, navLockInstalled: false, childSessionType: 'speech', listenedCurrent: false,
       easyMediaRecorder: null, easyRecordChunks: [], easyRecordedAudioUrl: '', easyUnlockTimer: null, easyLockedAfterFirstTap: false,
       easyCards: [], editingEasyId: null, dbReady: false, easyDb: null, easyDbReady: false,
-      cameraStream: null, cameraTarget: null, capturedSpeechImageUrl: '', capturedEasyImageUrl: ''
+      easyTapLocked: false, easyTapLockTimer: null,
+      speechTapLocked: false, speechTapLockTimer: null,
+      cameraStream: null, cameraTarget: null, capturedSpeechImageUrl: '', capturedEasyImageUrl: '',
+      rewardLocked: false, suppressRecognition: false, suppressTimer: null
     };
 
     const $ = (id) => document.getElementById(id);
     const nodes = {
       homeScreen: $('homeScreen'), practiceScreen: $('practiceScreen'), modeBadge: $('modeBadge'),
       tabSpeechBtn: $('tabSpeechBtn'), tabEasyBtn: $('tabEasyBtn'), speechTab: $('speechTab'), easyTab: $('easyTab'),
-      startSpeechModeBtn: $('startSpeechModeBtn'), startEasyModeBtn: $('startEasyModeBtn'), wordInput: $('wordInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
+      startSpeechModeBtn: $('startSpeechModeBtn'), startEasyModeBtn: $('startEasyModeBtn'), wordInput: $('wordInput'), speechPassInput: $('speechPassInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
       recordBtn: $('recordBtn'), stopBtn: $('stopBtn'), playRecordedBtn: $('playRecordedBtn'), saveCardBtn: $('saveCardBtn'), addStatus: $('addStatus'),
       cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), tapNote: $('tapNote'), nextEasyRow: $('nextEasyRow'), nextEasyBtn: $('nextEasyBtn'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceStatus: $('practiceStatus'),
       easyWordInput: $('easyWordInput'), easyImageInput: $('easyImageInput'), openEasyCameraBtn: $('openEasyCameraBtn'), easyAudioInput: $('easyAudioInput'), easyCardsList: $('easyCardsList'), easyRecordBtn: $('easyRecordBtn'), easyStopBtn: $('easyStopBtn'), easyPlayBtn: $('easyPlayBtn'), saveEasyCardBtn: $('saveEasyCardBtn'), cancelEasyEditBtn: $('cancelEasyEditBtn'), easyStatus: $('easyStatus'),
@@ -287,6 +294,13 @@
 
     function normalizeWord(text) {
       return (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function parsePassPhrases(value) {
+      return (value || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
     }
 
     function setStatus(target, message, tone) {
@@ -406,6 +420,14 @@
       });
     }
 
+    function sortCardsByOrder(cards) {
+      return [...cards].sort((a, b) => {
+        const ao = Number.isFinite(a.order) ? a.order : Number.MAX_SAFE_INTEGER;
+        const bo = Number.isFinite(b.order) ? b.order : Number.MAX_SAFE_INTEGER;
+        return ao - bo;
+      });
+    }
+
     async function migrateLegacyCardsIfNeeded() {
       const existing = await dbGetAllCards();
       if (existing.length > 0) return existing;
@@ -422,10 +444,13 @@
           id: String(card.id || Date.now() + Math.random()),
           word: card.word || 'Reč',
           imageUrl: card.imageUrl || defaultImg('🧩'),
-          audioUrl: card.audioUrl || ''
+          audioUrl: card.audioUrl || '',
+          passPhrases: Array.isArray(card.passPhrases) ? card.passPhrases : [],
+          order: typeof card.order === 'number' ? card.order : seed.indexOf(card)
         });
       }
-      return dbGetAllCards();
+      const loaded = await dbGetAllCards();
+      return sortCardsByOrder(loaded);
     }
 
     async function migrateEasyCardsIfNeeded() {
@@ -445,10 +470,12 @@
           word: card.word || 'Kartica',
           imageUrl: card.imageUrl || defaultImg('🧩'),
           audioUrl: card.audioUrl || '',
-          soundText: card.soundText || card.word || 'Zvuk'
+          soundText: card.soundText || card.word || 'Zvuk',
+          order: typeof card.order === 'number' ? card.order : seed.indexOf(card)
         });
       }
-      return dbGetAllEasyCards();
+      const loaded = await dbGetAllEasyCards();
+      return sortCardsByOrder(loaded);
     }
 
     async function loadState() {
@@ -462,7 +489,7 @@
         state.db = await openDB();
         state.dbReady = true;
         const cards = await migrateLegacyCardsIfNeeded();
-        state.cards = cards;
+        state.cards = sortCardsByOrder(cards);
       } catch {
         state.dbReady = false;
         try {
@@ -477,7 +504,7 @@
         state.easyDb = await openEasyDB();
         state.easyDbReady = true;
         const easyCards = await migrateEasyCardsIfNeeded();
-        state.easyCards = easyCards;
+        state.easyCards = sortCardsByOrder(easyCards);
       } catch {
         state.easyDbReady = false;
         try {
@@ -666,6 +693,33 @@
       return speakText(fallback);
     }
 
+    function clearSpeechSuppression() {
+      state.suppressRecognition = false;
+      clearTimeout(state.suppressTimer);
+      state.suppressTimer = null;
+    }
+
+    async function waitForPlaybackEndOrTimeout(timeoutMs = 10000) {
+      const audio = state.activeAudio;
+      if (!audio || audio.paused || audio.ended) return;
+      await new Promise((resolve) => {
+        let finished = false;
+        const done = () => {
+          if (finished) return;
+          finished = true;
+          audio.removeEventListener('ended', done);
+          audio.removeEventListener('pause', done);
+          audio.removeEventListener('error', done);
+          clearTimeout(timer);
+          resolve();
+        };
+        const timer = setTimeout(done, timeoutMs);
+        audio.addEventListener('ended', done, { once: true });
+        audio.addEventListener('pause', done, { once: true });
+        audio.addEventListener('error', done, { once: true });
+      });
+    }
+
     function renderCardsList() {
       nodes.cardsList.innerHTML = '';
       if (!state.cards.length) {
@@ -680,12 +734,20 @@
             <img class="thumb" src="${card.imageUrl}" alt="${card.word}">
             <div style="flex:1;text-align:left;">
               <p class="w">${card.word}</p>
+              <input data-act="passInput" type="text" value="${(Array.isArray(card.passPhrases) ? card.passPhrases.join(', ') : '')}" placeholder="Prolaz: Ma, Mam" style="margin-top:6px;" />
             </div>
           </button>
-          <button type="button" class="del-btn">Obriši</button>
+          <button type="button" class="del-btn" data-act="savePass">Sačuvaj</button>
+          <button type="button" class="del-btn" data-act="up">↑</button>
+          <button type="button" class="del-btn" data-act="down">↓</button>
+          <button type="button" class="del-btn" data-act="delete">Obriši</button>
         `;
         const playBtn = row.querySelector('.item-main');
-        const deleteBtn = row.querySelector('.del-btn');
+        const passInput = row.querySelector('[data-act="passInput"]');
+        const savePassBtn = row.querySelector('[data-act="savePass"]');
+        const upBtn = row.querySelector('[data-act="up"]');
+        const downBtn = row.querySelector('[data-act="down"]');
+        const deleteBtn = row.querySelector('[data-act="delete"]');
 
         playBtn.addEventListener('click', async () => {
           state.index = idx;
@@ -697,6 +759,30 @@
             setStatus(nodes.addStatus, `Kartica "${card.word}" nema snimljen zvuk.`, 'warn');
           }
         });
+        passInput.addEventListener('click', (e) => e.stopPropagation());
+        savePassBtn.addEventListener('click', async () => {
+          const nextPass = parsePassPhrases(passInput.value);
+          card.passPhrases = nextPass;
+          try {
+            await dbPutCard(card);
+            setStatus(nodes.addStatus, `Prolaz podešen za "${card.word}".`, 'ok');
+          } catch {
+            setStatus(nodes.addStatus, 'Ne mogu da sačuvam prolaz uslov (baza).', 'warn');
+          }
+        });
+
+        upBtn.addEventListener('click', async () => {
+          if (idx <= 0) return;
+          [state.cards[idx - 1], state.cards[idx]] = [state.cards[idx], state.cards[idx - 1]];
+          try { await persistSpeechOrder(); } catch { setStatus(nodes.addStatus, 'Ne mogu da sačuvam redosled (speech).', 'warn'); }
+          renderCardsList();
+        });
+        downBtn.addEventListener('click', async () => {
+          if (idx >= state.cards.length - 1) return;
+          [state.cards[idx + 1], state.cards[idx]] = [state.cards[idx], state.cards[idx + 1]];
+          try { await persistSpeechOrder(); } catch { setStatus(nodes.addStatus, 'Ne mogu da sačuvam redosled (speech).', 'warn'); }
+          renderCardsList();
+        });
 
         deleteBtn.addEventListener('click', async () => {
           const confirmed = window.confirm(`Obriši karticu "${card.word}"?`);
@@ -704,6 +790,7 @@
           try {
             await dbDeleteCard(card.id);
             state.cards = state.cards.filter((c) => c.id !== card.id);
+            try { await persistSpeechOrder(); } catch {}
             if (state.index >= state.cards.length) state.index = 0;
             renderCardsList();
             setStatus(nodes.addStatus, `Kartica "${card.word}" je obrisana.`, 'ok');
@@ -755,16 +842,34 @@
               <p class="w">${card.word}</p>
             </div>
           </button>
+          <button type="button" class="del-btn" data-act="up">↑</button>
+          <button type="button" class="del-btn" data-act="down">↓</button>
           <button type="button" class="del-btn" data-act="edit">Izmeni</button>
           <button type="button" class="del-btn" data-act="delete">Obriši</button>
         `;
         const playBtn = row.querySelector('.item-main');
+        const upBtn = row.querySelector('[data-act="up"]');
+        const downBtn = row.querySelector('[data-act="down"]');
         const editBtn = row.querySelector('[data-act="edit"]');
         const deleteBtn = row.querySelector('[data-act="delete"]');
 
         playBtn.addEventListener('click', async () => {
           const played = await playCardSound(card);
           setStatus(nodes.easyStatus, played ? `Puštam zvuk za "${card.word}".` : `Ne mogu da pustim zvuk za "${card.word}".`, played ? 'ok' : 'warn');
+        });
+        upBtn.addEventListener('click', async () => {
+          const idx = state.easyCards.findIndex((c) => c.id === card.id);
+          if (idx <= 0) return;
+          [state.easyCards[idx - 1], state.easyCards[idx]] = [state.easyCards[idx], state.easyCards[idx - 1]];
+          try { await persistEasyOrder(); } catch { setStatus(nodes.easyStatus, 'Ne mogu da sačuvam redosled (easy).', 'warn'); }
+          renderEasyCardsList();
+        });
+        downBtn.addEventListener('click', async () => {
+          const idx = state.easyCards.findIndex((c) => c.id === card.id);
+          if (idx < 0 || idx >= state.easyCards.length - 1) return;
+          [state.easyCards[idx + 1], state.easyCards[idx]] = [state.easyCards[idx], state.easyCards[idx + 1]];
+          try { await persistEasyOrder(); } catch { setStatus(nodes.easyStatus, 'Ne mogu da sačuvam redosled (easy).', 'warn'); }
+          renderEasyCardsList();
         });
         editBtn.addEventListener('click', () => {
           state.editingEasyId = card.id;
@@ -800,6 +905,7 @@
         return;
       }
       state.easyCards = state.easyCards.filter((c) => c.id !== cardId);
+      try { await persistEasyOrder(); } catch {}
       if (state.editingEasyId === cardId) resetEasyForm();
       renderEasyCardsList();
       setStatus(nodes.easyStatus, `Kartica "${card.word}" je obrisana.`, 'ok');
@@ -888,7 +994,8 @@
         word,
         imageUrl,
         audioUrl,
-        soundText: word
+        soundText: word,
+        order: state.easyCards.length
       };
       if (!state.easyDbReady) {
         const recovered = await recoverDBConnection();
@@ -927,12 +1034,14 @@
         nodes.nextEasyRow.style.display = 'flex';
         nodes.nextEasyBtn.disabled = !(state.listenedCurrent && !state.easyLockedAfterFirstTap);
         nodes.practiceStatus.style.display = 'none';
+        nodes.tapCard.disabled = state.easyTapLocked;
       } else {
         nodes.tapNote.style.display = 'block';
         nodes.practiceWord.style.display = 'block';
         nodes.tapNote.textContent = 'Dodirni karticu da pustiš snimljeni zvuk.';
         nodes.nextEasyRow.style.display = 'none';
         nodes.practiceStatus.style.display = 'block';
+        nodes.tapCard.disabled = state.rewardLocked || state.speechTapLocked;
         setStatus(nodes.practiceStatus, `<span class="listen-dot"></span>Slušam: reci jasno "${card.word}"`, '');
       }
     }
@@ -943,9 +1052,17 @@
         state.index = (state.index + 1) % sessionCards.length;
         state.listenedCurrent = false;
         state.easyLockedAfterFirstTap = false;
+        state.easyTapLocked = false;
+        clearTimeout(state.easyTapLockTimer);
+        state.easyTapLockTimer = null;
+        state.speechTapLocked = false;
+        clearTimeout(state.speechTapLockTimer);
+        state.speechTapLockTimer = null;
         clearTimeout(state.easyUnlockTimer);
         state.easyUnlockTimer = null;
         state.advancing = false;
+        state.rewardLocked = false;
+        clearSpeechSuppression();
         renderPracticeCard();
         if (state.childSessionType === 'speech') restartListening();
       };
@@ -953,25 +1070,31 @@
         goNext();
         return;
       }
+      state.rewardLocked = true;
+      nodes.tapCard.disabled = true;
       nodes.rewardOverlay.classList.add('show');
       setTimeout(() => {
         nodes.rewardOverlay.classList.remove('show');
         goNext();
-      }, 850);
+      }, REWARD_LOCK_MS);
     }
 
     function onRecognized(transcript) {
+      if (state.suppressRecognition) return;
       if (state.advancing) return;
       const card = currentSessionCard();
       if (!card) return;
       const rec = normalizeWord(transcript);
       const target = normalizeWord(card.word);
-      if (rec === target) {
+      const tokens = rec.split(' ').filter(Boolean);
+      const passList = [target, ...((card.passPhrases || []).map((x) => normalizeWord(x)).filter(Boolean))];
+      const matched = passList.some((p) => rec === p || tokens.includes(p) || rec.includes(p));
+      if (matched) {
         state.advancing = true;
-        setStatus(nodes.practiceStatus, `Prepoznato: "${transcript}". Uspešno!`, 'ok');
+        setStatus(nodes.practiceStatus, `Prepoznato: "${transcript}" - uslov ispunjen za "${card.word}".`, 'ok');
         showRewardThenNext();
       } else {
-        setStatus(nodes.practiceStatus, `Čuo sam: "${transcript}". Probaj ponovo: "${card.word}".`, 'warn');
+        setStatus(nodes.practiceStatus, `Čuo sam: "${transcript}". Još nema uslova za "${card.word}".`, 'warn');
       }
     }
 
@@ -997,11 +1120,11 @@
       state.recognition.onstart = () => { state.listening = true; };
       state.recognition.onresult = (e) => onRecognized(e.results[0][0].transcript || '');
       state.recognition.onerror = () => {
-        if (!state.advancing) setStatus(nodes.practiceStatus, 'Nisam razumeo pokušaj. Slušam ponovo...', 'warn');
+        if (!state.advancing && !state.suppressRecognition) setStatus(nodes.practiceStatus, 'Nisam razumeo pokušaj. Slušam ponovo...', 'warn');
       };
       state.recognition.onend = () => {
         state.listening = false;
-        if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing) setTimeout(restartListening, 250);
+        if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing && !state.suppressRecognition) setTimeout(restartListening, 250);
       };
       try { state.recognition.start(); } catch { setTimeout(restartListening, 350); }
     }
@@ -1058,6 +1181,7 @@
 
     async function saveCard() {
       const word = nodes.wordInput.value.trim();
+      const passPhrases = parsePassPhrases(nodes.speechPassInput.value);
       const imageFile = nodes.imageInput.files[0];
       const audioFile = nodes.audioInput.files[0];
       if (!word) { setStatus(nodes.addStatus, 'Reč je obavezna.', 'warn'); return; }
@@ -1075,7 +1199,7 @@
 
       if (!audioUrl) { setStatus(nodes.addStatus, 'Dodaj ili snimi zvuk kartice.', 'warn'); return; }
 
-      const newCard = { id: `${Date.now()}_${Math.random().toString(16).slice(2, 7)}`, word, imageUrl, audioUrl };
+      const newCard = { id: `${Date.now()}_${Math.random().toString(16).slice(2, 7)}`, word, imageUrl, audioUrl, passPhrases, order: state.cards.length };
       if (!state.dbReady) {
         const recovered = await recoverMainDBConnection();
         if (!recovered) {
@@ -1103,12 +1227,31 @@
       renderCardsList();
 
       nodes.wordInput.value = '';
+      nodes.speechPassInput.value = '';
       nodes.imageInput.value = '';
       nodes.audioInput.value = '';
       state.recordedAudioUrl = '';
       state.capturedSpeechImageUrl = '';
       nodes.playRecordedBtn.disabled = true;
       setStatus(nodes.addStatus, 'Kartica je sačuvana trajno na uređaju.', 'ok');
+    }
+
+    async function persistSpeechOrder() {
+      if (!state.dbReady) return;
+      for (let i = 0; i < state.cards.length; i += 1) {
+        const c = state.cards[i];
+        c.order = i;
+        await dbPutCard(c);
+      }
+    }
+
+    async function persistEasyOrder() {
+      if (!state.easyDbReady) return;
+      for (let i = 0; i < state.easyCards.length; i += 1) {
+        const c = state.easyCards[i];
+        c.order = i;
+        await dbPutEasyCard(c);
+      }
     }
 
     function enterChildMode(sessionType) {
@@ -1129,8 +1272,15 @@
       state.advancing = false;
       state.listenedCurrent = false;
       state.easyLockedAfterFirstTap = false;
+      state.easyTapLocked = false;
+      clearTimeout(state.easyTapLockTimer);
+      state.easyTapLockTimer = null;
+      state.speechTapLocked = false;
+      clearTimeout(state.speechTapLockTimer);
+      state.speechTapLockTimer = null;
       clearTimeout(state.easyUnlockTimer);
       state.easyUnlockTimer = null;
+      clearSpeechSuppression();
       updateModeUI();
       installChildNavigationLock();
       renderPracticeCard();
@@ -1142,6 +1292,10 @@
       stopListening();
       clearTimeout(state.easyUnlockTimer);
       state.easyUnlockTimer = null;
+      clearTimeout(state.speechTapLockTimer);
+      state.speechTapLockTimer = null;
+      state.speechTapLocked = false;
+      clearSpeechSuppression();
       state.mode = 'parent';
       state.childSessionType = 'speech';
       localStorage.setItem(MODE_KEY, state.mode);
@@ -1200,11 +1354,47 @@
       });
 
       nodes.tapCard.addEventListener('click', async () => {
+        if (state.rewardLocked) return;
+        if (state.childSessionType === 'easy' && state.easyTapLocked) return;
+        if (state.childSessionType === 'speech' && state.speechTapLocked) return;
+        if (state.childSessionType === 'easy') {
+          state.easyTapLocked = true;
+          nodes.tapCard.disabled = true;
+          clearTimeout(state.easyTapLockTimer);
+          state.easyTapLockTimer = setTimeout(() => {
+            state.easyTapLocked = false;
+            if (state.childSessionType === 'easy') nodes.tapCard.disabled = false;
+          }, EASY_TAP_LOCK_MS);
+        } else if (state.childSessionType === 'speech') {
+          stopListening();
+          state.suppressRecognition = true;
+          clearTimeout(state.suppressTimer);
+          state.suppressTimer = setTimeout(() => {
+            clearSpeechSuppression();
+            if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing && !state.rewardLocked) {
+              restartListening();
+            }
+          }, 12000);
+          state.speechTapLocked = true;
+          nodes.tapCard.disabled = true;
+          clearTimeout(state.speechTapLockTimer);
+          state.speechTapLockTimer = setTimeout(() => {
+            state.speechTapLocked = false;
+            if (state.childSessionType === 'speech' && !state.rewardLocked) nodes.tapCard.disabled = false;
+          }, EASY_TAP_LOCK_MS);
+        }
         const card = currentSessionCard();
         const played = await playCardSound(card);
         if (!played) {
+          clearSpeechSuppression();
+          if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing && !state.rewardLocked) restartListening();
           setStatus(nodes.practiceStatus, 'Ne mogu da pustim zvuk kartice.', 'warn');
           return;
+        }
+        if (state.childSessionType === 'speech') {
+          await waitForPlaybackEndOrTimeout(12000);
+          clearSpeechSuppression();
+          if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing && !state.rewardLocked) restartListening();
         }
         if (state.childSessionType === 'easy') {
           if (!state.listenedCurrent) {
