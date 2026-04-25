@@ -14,6 +14,7 @@
     .screen { display:none; }
     .screen.active { display:block; }
     .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .head-right { display:flex; align-items:center; gap:8px; }
     .tabs { display:flex; gap:8px; margin-bottom:10px; }
     .tab-btn { flex:1; border:1px solid #eacfbf; background:#fff3e8; color:#8a573f; border-radius:12px; padding:10px; font-weight:800; cursor:pointer; }
     .tab-btn.active { background:#ef6d2f; color:#fff; border-color:#ef6d2f; }
@@ -83,11 +84,11 @@
     .easy-board-grid.has-focus .easy-board-card.faded { opacity:.28; }
     .easy-board-grid.locked .easy-board-card { pointer-events:none; }
     .launch-grid { display:grid; gap:8px; }
-    .launch-row { display:grid; grid-template-columns:2fr 1fr; gap:8px; }
+    .launch-row { display:grid; grid-template-columns:1fr; gap:8px; }
+    .icon-btn { width:38px; height:38px; border-radius:10px; border:1px solid #eacfbf; background:#fff5ee; color:#7f5543; font-size:20px; line-height:1; font-weight:800; cursor:pointer; }
     @media (max-width:360px) {
       .easy-board-grid { gap:8px; }
       .easy-board-card { padding:5px; border-radius:12px; }
-      .launch-row { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -96,22 +97,22 @@
     <section id="homeScreen" class="screen active">
       <div class="head">
         <h1 style="margin:0;font-size:22px;">Govorni trener</h1>
-        <div id="modeBadge" class="mode">Režim roditelja</div>
+        <div class="head-right">
+          <div id="modeBadge" class="mode">Režim roditelja</div>
+          <button id="openConfigBtn" type="button" class="icon-btn" aria-label="Otvori konfiguraciju" title="Konfiguracija">⚙</button>
+        </div>
       </div>
       <div class="panel">
         <h2 class="title">Pokreni Vežbu</h2>
         <div class="launch-grid">
           <div class="launch-row">
             <button id="launchEasyStandardBtn" type="button" class="btn pri">Laki režim (jedna kartica)</button>
-            <button id="configEasyStandardBtn" type="button" class="btn mut">Konfiguracija</button>
           </div>
           <div class="launch-row">
             <button id="launchEasyBoardBtn" type="button" class="btn pri">Laki režim (tabla)</button>
-            <button id="configEasyBoardBtn" type="button" class="btn mut">Konfiguracija</button>
           </div>
           <div class="launch-row">
             <button id="launchSpeechBtn" type="button" class="btn pri">Govorni režim</button>
-            <button id="configSpeechBtn" type="button" class="btn mut">Konfiguracija</button>
           </div>
         </div>
         <p class="hint" style="margin-top:8px;">Prvo pokreni željeni mod, ili odmah idi na konfiguraciju kartica.</p>
@@ -347,9 +348,9 @@
     const nodes = {
       homeScreen: $('homeScreen'), configScreen: $('configScreen'), practiceScreen: $('practiceScreen'), easyBoardScreen: $('easyBoardScreen'), modeBadge: $('modeBadge'),
       tabSpeechBtn: $('tabSpeechBtn'), tabEasyBtn: $('tabEasyBtn'), speechTab: $('speechTab'), easyTab: $('easyTab'),
+      openConfigBtn: $('openConfigBtn'),
       configBackBtn: $('configBackBtn'),
       launchSpeechBtn: $('launchSpeechBtn'), launchEasyStandardBtn: $('launchEasyStandardBtn'), launchEasyBoardBtn: $('launchEasyBoardBtn'),
-      configSpeechBtn: $('configSpeechBtn'), configEasyStandardBtn: $('configEasyStandardBtn'), configEasyBoardBtn: $('configEasyBoardBtn'),
       speechConfigPanel: $('speechConfigPanel'), easyConfigPanel: $('easyConfigPanel'),
       wordInput: $('wordInput'), speechPassInput: $('speechPassInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
       recordBtn: $('recordBtn'), stopBtn: $('stopBtn'), playRecordedBtn: $('playRecordedBtn'), saveCardBtn: $('saveCardBtn'), addStatus: $('addStatus'),
@@ -941,7 +942,7 @@
       nodes.easyTab.classList.toggle('active', !isSpeech);
     }
 
-    function openConfigPanel(tab) {
+    function openConfigPanel(tab = 'easy') {
       state.parentScreen = 'config';
       showScreen('config');
       switchHomeTab(tab);
@@ -1482,6 +1483,7 @@
     function bind() {
       nodes.tabSpeechBtn.addEventListener('click', () => switchHomeTab('speech'));
       nodes.tabEasyBtn.addEventListener('click', () => switchHomeTab('easy'));
+      nodes.openConfigBtn.addEventListener('click', () => openConfigPanel('easy'));
       nodes.configBackBtn.addEventListener('click', () => {
         state.parentScreen = 'home';
         showScreen('home');
@@ -1489,9 +1491,6 @@
       nodes.launchSpeechBtn.addEventListener('click', () => enterChildMode('speech'));
       nodes.launchEasyStandardBtn.addEventListener('click', () => enterChildMode('easy', 'standard'));
       nodes.launchEasyBoardBtn.addEventListener('click', () => enterChildMode('easy', 'board'));
-      nodes.configSpeechBtn.addEventListener('click', () => openConfigPanel('speech'));
-      nodes.configEasyStandardBtn.addEventListener('click', () => openConfigPanel('easy'));
-      nodes.configEasyBoardBtn.addEventListener('click', () => openConfigPanel('easy'));
       nodes.openSpeechCameraBtn.addEventListener('click', () => openCamera('speech'));
       nodes.openEasyCameraBtn.addEventListener('click', () => openCamera('easy'));
       nodes.cameraCaptureBtn.addEventListener('click', captureCameraImage);
