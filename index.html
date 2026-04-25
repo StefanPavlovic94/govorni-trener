@@ -96,25 +96,36 @@
     <section id="homeScreen" class="screen active">
       <div class="head">
         <h1 style="margin:0;font-size:22px;">Govorni trener</h1>
-        <div id="modeBadge" class="mode">Parent mode</div>
+        <div id="modeBadge" class="mode">Režim roditelja</div>
       </div>
       <div class="panel">
         <h2 class="title">Pokreni Vežbu</h2>
         <div class="launch-grid">
           <div class="launch-row">
-            <button id="launchEasyStandardBtn" type="button" class="btn pri">Easy standard</button>
+            <button id="launchEasyStandardBtn" type="button" class="btn pri">Laki režim (jedna kartica)</button>
             <button id="configEasyStandardBtn" type="button" class="btn mut">Konfiguracija</button>
           </div>
           <div class="launch-row">
-            <button id="launchEasyBoardBtn" type="button" class="btn pri">Easy board</button>
+            <button id="launchEasyBoardBtn" type="button" class="btn pri">Laki režim (tabla)</button>
             <button id="configEasyBoardBtn" type="button" class="btn mut">Konfiguracija</button>
           </div>
           <div class="launch-row">
-            <button id="launchSpeechBtn" type="button" class="btn pri">Speech mode</button>
+            <button id="launchSpeechBtn" type="button" class="btn pri">Govorni režim</button>
             <button id="configSpeechBtn" type="button" class="btn mut">Konfiguracija</button>
           </div>
         </div>
         <p class="hint" style="margin-top:8px;">Prvo pokreni željeni mod, ili odmah idi na konfiguraciju kartica.</p>
+      </div>
+      <div class="panel">
+        <h2 class="title">Šta Je Govorni Trener?</h2>
+        <p class="hint" style="font-size:14px;line-height:1.4;color:#6f4f41;">
+          Govorni trener je aplikacija za roditelja i dete, osmišljena za svakodnevne kratke vežbe govora kod kuće.
+          Dete ne koristi aplikaciju samo: roditelj vodi aktivnost, bira kartice i podstiče pokušaj govora kroz miran tempo i ponavljanje.
+        </p>
+        <p class="hint" style="margin-top:8px;font-size:14px;line-height:1.4;color:#6f4f41;">
+          Laki režimi pomažu detetu da sluša i povezuje sliku sa zvukom, a govorni režim dodaje prepoznavanje pokušaja izgovora.
+          Sve kartice (slika, tekst i zvuk) možete prilagoditi svom detetu, pa vežbanje postaje lično, poznato i motivišuće.
+        </p>
       </div>
     </section>
 
@@ -124,17 +135,17 @@
         <button id="configBackBtn" type="button" class="btn mut" style="padding:8px 10px;">Nazad</button>
       </div>
       <div class="tabs">
-        <button id="tabEasyBtn" type="button" class="tab-btn active">Easy konfiguracija</button>
-        <button id="tabSpeechBtn" type="button" class="tab-btn">Speech konfiguracija</button>
+        <button id="tabEasyBtn" type="button" class="tab-btn active">Podešavanje lakog režima</button>
+        <button id="tabSpeechBtn" type="button" class="tab-btn">Podešavanje govornog režima</button>
       </div>
 
       <div id="speechTab" class="tab-panel">
         <div class="panel">
-          <h2 class="title">Speech konfiguracija</h2>
+          <h2 class="title">Podešavanje govornog režima</h2>
           <p class="hint">U child modu izlaz je zaključan: skriveno dugme 5s + PIN.</p>
         </div>
         <div id="speechConfigPanel" class="panel">
-          <h2 class="title">Dodaj speech karticu</h2>
+          <h2 class="title">Dodaj govornu karticu</h2>
           <label for="wordInput">Reč</label>
           <input id="wordInput" placeholder="npr. Mama" />
           <label for="speechPassInput">Dovoljno za prolaz (zarezom)</label>
@@ -150,7 +161,7 @@
           <label>Snimanje zvuka</label>
           <div class="row">
             <button id="recordBtn" class="btn warn" type="button">Snimaj</button>
-            <button id="stopBtn" class="btn mut" type="button" disabled>Stop</button>
+            <button id="stopBtn" class="btn mut" type="button" disabled>Zaustavi</button>
             <button id="playRecordedBtn" class="btn mut" type="button" disabled>Pusti</button>
           </div>
 
@@ -162,7 +173,7 @@
         </div>
 
         <div class="panel">
-          <h2 class="title">Moje speech kartice</h2>
+          <h2 class="title">Moje govorne kartice</h2>
           <p class="hint">Klik na karticu pušta njen snimljeni zvuk.</p>
           <div id="cardsList" class="list"></div>
         </div>
@@ -170,12 +181,12 @@
 
       <div id="easyTab" class="tab-panel active">
         <div class="panel">
-          <h2 class="title">Easy konfiguracija</h2>
-          <p class="hint">Iste easy kartice koristi i easy standard i easy board.</p>
+          <h2 class="title">Podešavanje lakog režima</h2>
+          <p class="hint">Iste lake kartice koristi i laki režim (jedna kartica) i laki režim (tabla).</p>
         </div>
         <div id="easyConfigPanel" class="panel">
-          <h2 class="title">Dodaj / Izmeni easy karticu</h2>
-          <label for="easyWordInput">Tekst (skriven u easy prikazu)</label>
+          <h2 class="title">Dodaj / izmeni laku karticu</h2>
+          <label for="easyWordInput">Tekst (skriven u lakom prikazu)</label>
           <input id="easyWordInput" placeholder="npr. Pas" />
 
 
@@ -188,7 +199,7 @@
           <label>Snimanje zvuka</label>
           <div class="row">
             <button id="easyRecordBtn" type="button" class="btn warn">Snimaj</button>
-            <button id="easyStopBtn" type="button" class="btn mut" disabled>Stop</button>
+            <button id="easyStopBtn" type="button" class="btn mut" disabled>Zaustavi</button>
             <button id="easyPlayBtn" type="button" class="btn mut" disabled>Pusti</button>
           </div>
 
@@ -196,14 +207,14 @@
           <input id="easyAudioInput" type="file" accept="audio/*" />
 
           <div class="row" style="margin-top:8px;">
-            <button id="saveEasyCardBtn" type="button" class="btn ok">Sačuvaj easy karticu</button>
+            <button id="saveEasyCardBtn" type="button" class="btn ok">Sačuvaj laku karticu</button>
             <button id="cancelEasyEditBtn" type="button" class="btn mut">Otkaži izmenu</button>
           </div>
-          <div id="easyStatus" class="status">Dodaj easy karticu ili izaberi postojeću za izmenu.</div>
+          <div id="easyStatus" class="status">Dodaj laku karticu ili izaberi postojeću za izmenu.</div>
         </div>
 
         <div class="panel">
-          <h2 class="title">Moje easy kartice</h2>
+          <h2 class="title">Moje lake kartice</h2>
           <p class="hint">Klik na karticu pušta njen zvuk. Možeš menjati i brisati.</p>
           <div id="easyCardsList" class="list"></div>
         </div>
@@ -230,7 +241,7 @@
     <section id="easyBoardScreen" class="screen">
       <div class="easy-board-wrap">
         <div class="panel">
-          <h2 class="easy-board-title">Easy board</h2>
+          <h2 class="easy-board-title">Laka tabla</h2>
           <p id="easyBoardStatus" class="easy-board-status"></p>
         </div>
         <div id="easyBoardGrid" class="easy-board-grid"></div>
@@ -247,14 +258,14 @@
 
   <button id="hiddenExitBtn" class="hidden-exit" aria-label="exit-child"></button>
   <section id="fsBanner" class="fs-banner">
-    <span>Child mode zahteva fullscreen.</span>
+    <span>Režim deteta zahteva ceo ekran.</span>
     <button id="fsRetryBtn" type="button">Uključi</button>
   </section>
 
   <section id="pinModal" class="pin-modal">
     <div class="pin-card">
       <h3>Unesi roditeljski PIN</h3>
-      <p class="hint" style="margin-bottom:8px;">MVP PIN je 1234</p>
+      <p class="hint" style="margin-bottom:8px;">Roditeljski PIN je 1234</p>
       <input id="pinInput" type="password" inputmode="numeric" placeholder="PIN" />
       <div class="row" style="margin-top:8px;">
         <button id="pinConfirmBtn" class="btn pri">Potvrdi</button>
@@ -639,7 +650,7 @@
         setStatus(nodes.addStatus, 'Slika je uslikana kamerom.', 'ok');
       } else {
         state.capturedEasyImageUrl = dataUrl;
-        setStatus(nodes.easyStatus, 'Easy slika je uslikana kamerom.', 'ok');
+        setStatus(nodes.easyStatus, 'Slika lake kartice je uslikana kamerom.', 'ok');
       }
       closeCamera();
     }
@@ -656,7 +667,7 @@
     }
 
     function updateModeUI() {
-      nodes.modeBadge.textContent = state.mode === 'child' ? 'Child mode' : 'Parent mode';
+      nodes.modeBadge.textContent = state.mode === 'child' ? 'Režim deteta' : 'Režim roditelja';
       nodes.hiddenExitBtn.style.display = state.mode === 'child' ? 'block' : 'none';
       if (state.mode === 'child') {
         if (state.childSessionType === 'easy') {
@@ -775,7 +786,7 @@
       const cards = getVisibleEasyCards();
       nodes.easyBoardGrid.innerHTML = '';
       if (!cards.length) {
-        nodes.easyBoardStatus.textContent = 'Nema easy kartica.';
+        nodes.easyBoardStatus.textContent = 'Nema lakih kartica.';
         return;
       }
       const hasFocus = Boolean(state.easyBoardFocusedId);
@@ -893,13 +904,13 @@
         upBtn.addEventListener('click', async () => {
           if (idx <= 0) return;
           [state.cards[idx - 1], state.cards[idx]] = [state.cards[idx], state.cards[idx - 1]];
-          try { await persistSpeechOrder(); } catch { setStatus(nodes.addStatus, 'Ne mogu da sačuvam redosled (speech).', 'warn'); }
+          try { await persistSpeechOrder(); } catch { setStatus(nodes.addStatus, 'Ne mogu da sačuvam redosled (govorni).', 'warn'); }
           renderCardsList();
         });
         downBtn.addEventListener('click', async () => {
           if (idx >= state.cards.length - 1) return;
           [state.cards[idx + 1], state.cards[idx]] = [state.cards[idx], state.cards[idx + 1]];
-          try { await persistSpeechOrder(); } catch { setStatus(nodes.addStatus, 'Ne mogu da sačuvam redosled (speech).', 'warn'); }
+          try { await persistSpeechOrder(); } catch { setStatus(nodes.addStatus, 'Ne mogu da sačuvam redosled (govorni).', 'warn'); }
           renderCardsList();
         });
 
@@ -955,7 +966,7 @@
       if (!state.easyCards.length) {
         const d = document.createElement('div');
         d.className = 'item';
-        d.textContent = 'Nema easy kartica.';
+        d.textContent = 'Nema lakih kartica.';
         nodes.easyCardsList.appendChild(d);
         return;
       }
@@ -988,14 +999,14 @@
           const idx = state.easyCards.findIndex((c) => c.id === card.id);
           if (idx <= 0) return;
           [state.easyCards[idx - 1], state.easyCards[idx]] = [state.easyCards[idx], state.easyCards[idx - 1]];
-          try { await persistEasyOrder(); } catch { setStatus(nodes.easyStatus, 'Ne mogu da sačuvam redosled (easy).', 'warn'); }
+          try { await persistEasyOrder(); } catch { setStatus(nodes.easyStatus, 'Ne mogu da sačuvam redosled (laki).', 'warn'); }
           renderEasyCardsList();
         });
         downBtn.addEventListener('click', async () => {
           const idx = state.easyCards.findIndex((c) => c.id === card.id);
           if (idx < 0 || idx >= state.easyCards.length - 1) return;
           [state.easyCards[idx + 1], state.easyCards[idx]] = [state.easyCards[idx], state.easyCards[idx + 1]];
-          try { await persistEasyOrder(); } catch { setStatus(nodes.easyStatus, 'Ne mogu da sačuvam redosled (easy).', 'warn'); }
+          try { await persistEasyOrder(); } catch { setStatus(nodes.easyStatus, 'Ne mogu da sačuvam redosled (laki).', 'warn'); }
           renderEasyCardsList();
         });
         editBtn.addEventListener('click', () => {
@@ -1016,7 +1027,7 @@
     async function deleteEasyCard(cardId) {
       const card = state.easyCards.find((c) => c.id === cardId);
       if (!card) return;
-      const confirmed = window.confirm(`Obriši easy karticu "${card.word}"?`);
+      const confirmed = window.confirm(`Obriši laku karticu "${card.word}"?`);
       if (!confirmed) return;
       if (!state.easyDbReady) {
         const recovered = await recoverDBConnection();
@@ -1064,13 +1075,13 @@
           nodes.easyStopBtn.disabled = true;
           nodes.easyPlayBtn.disabled = false;
           stream.getTracks().forEach((t) => t.stop());
-          setStatus(nodes.easyStatus, 'Easy snimak je spreman.', 'ok');
+          setStatus(nodes.easyStatus, 'Snimak lake kartice je spreman.', 'ok');
         };
         state.easyMediaRecorder.start();
         nodes.easyRecordBtn.disabled = true;
         nodes.easyStopBtn.disabled = false;
         nodes.easyPlayBtn.disabled = true;
-        setStatus(nodes.easyStatus, 'Snimanje easy zvuka...', '');
+        setStatus(nodes.easyStatus, 'Snimanje zvuka lake kartice...', '');
       } catch {
         setStatus(nodes.easyStatus, 'Mikrofon nije odobren.', 'warn');
       }
@@ -1134,7 +1145,7 @@
       try {
         await dbPutEasyCard(payload);
       } catch {
-        setStatus(nodes.easyStatus, 'Ne mogu da sačuvam easy karticu (baza).', 'warn');
+        setStatus(nodes.easyStatus, 'Ne mogu da sačuvam laku karticu (baza).', 'warn');
         return;
       }
       if (editing) {
@@ -1145,7 +1156,7 @@
       }
       renderEasyCardsList();
       resetEasyForm();
-      setStatus(nodes.easyStatus, editing ? 'Easy kartica izmenjena.' : 'Easy kartica dodata.', 'ok');
+      setStatus(nodes.easyStatus, editing ? 'Laka kartica je izmenjena.' : 'Laka kartica je dodata.', 'ok');
     }
 
     function renderPracticeCard() {
@@ -1235,7 +1246,7 @@
     function restartListening() {
       if (state.mode !== 'child' || state.childSessionType !== 'speech') return;
       if (!SR) {
-        setStatus(nodes.practiceStatus, 'Speech recognition nije podržan na ovom browseru.', 'warn');
+        setStatus(nodes.practiceStatus, 'Prepoznavanje govora nije podržano na ovom browseru.', 'warn');
         return;
       }
       stopListening();
@@ -1383,12 +1394,12 @@
 
     function enterChildMode(sessionType, easyVariant) {
       if (sessionType === 'speech' && !state.cards.length) {
-        setStatus(nodes.addStatus, 'Dodaj bar jednu karticu za speech mode.', 'warn');
+        setStatus(nodes.addStatus, 'Dodaj bar jednu karticu za govorni režim.', 'warn');
         return;
       }
       if (sessionType === 'easy' && !state.easyCards.length) {
         switchHomeTab('easy');
-        setStatus(nodes.easyStatus, 'Dodaj bar jednu easy karticu.', 'warn');
+        setStatus(nodes.easyStatus, 'Dodaj bar jednu laku karticu.', 'warn');
         return;
       }
       state.mode = 'child';
@@ -1452,9 +1463,9 @@
       if (state.mode !== 'child') return;
       clearTimeout(state.holdTimer);
       if (state.childSessionType === 'easy') {
-        nodes.easyBoardStatus.textContent = 'Drži skriveno dugme 5 sekundi za unlock.';
+        nodes.easyBoardStatus.textContent = 'Drži skriveno dugme 5 sekundi za otključavanje.';
       } else {
-        setStatus(nodes.practiceStatus, 'Drži skriveno dugme 5 sekundi za unlock.', 'warn');
+        setStatus(nodes.practiceStatus, 'Drži skriveno dugme 5 sekundi za otključavanje.', 'warn');
       }
       state.holdTimer = setTimeout(() => {
         nodes.pinModal.classList.add('show');
@@ -1490,7 +1501,7 @@
       nodes.easyPlayBtn.addEventListener('click', async () => {
         if (!state.easyRecordedAudioUrl) return;
         const played = await playAudio(state.easyRecordedAudioUrl);
-        setStatus(nodes.easyStatus, played ? 'Puštam easy snimak.' : 'Ne mogu da pustim easy snimak.', played ? 'ok' : 'warn');
+        setStatus(nodes.easyStatus, played ? 'Puštam snimak lake kartice.' : 'Ne mogu da pustim snimak lake kartice.', played ? 'ok' : 'warn');
       });
       nodes.saveEasyCardBtn.addEventListener('click', saveEasyCard);
       nodes.cancelEasyEditBtn.addEventListener('click', () => {
@@ -1633,7 +1644,7 @@
         }
       } else {
         setStatus(nodes.addStatus, 'Dodaj podatke kartice pa sačuvaj.', '');
-        setStatus(nodes.easyStatus, 'Dodaj easy karticu ili izaberi postojeću za izmenu.', '');
+        setStatus(nodes.easyStatus, 'Dodaj laku karticu ili izaberi postojeću za izmenu.', '');
       }
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
       if (!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY, state.pin);
