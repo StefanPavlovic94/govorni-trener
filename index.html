@@ -72,6 +72,23 @@
     .fs-banner.show { display:flex; }
     .fs-banner button { border:0; border-radius:10px; background:#ef6d2f; color:#fff; padding:8px 10px; font-weight:800; }
     .arrow-icon { font-size:28px; line-height:1; display:inline-block; transform:translateY(-1px); }
+    .easy-board-wrap { min-height:calc(100vh - 28px); display:grid; align-content:start; gap:10px; }
+    .easy-board-title { margin:0; font-size:20px; }
+    .easy-board-status { margin:0; font-size:13px; color:#7f6256; font-weight:700; min-height:18px; }
+    .easy-board-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+    .easy-board-card { border:1px solid #f0dbc9; background:#fff8f2; border-radius:14px; padding:6px; cursor:pointer; transition:opacity .2s ease, transform .15s ease, box-shadow .15s ease; }
+    .easy-board-card:active { transform:scale(.98); }
+    .easy-board-card img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px; display:block; background:#ffe7d4; }
+    .easy-board-card.focused { box-shadow:0 0 0 3px rgba(239,109,47,.25); border-color:#ef6d2f; }
+    .easy-board-grid.has-focus .easy-board-card.faded { opacity:.28; }
+    .easy-board-grid.locked .easy-board-card { pointer-events:none; }
+    .launch-grid { display:grid; gap:8px; }
+    .launch-row { display:grid; grid-template-columns:2fr 1fr; gap:8px; }
+    @media (max-width:360px) {
+      .easy-board-grid { gap:8px; }
+      .easy-board-card { padding:5px; border-radius:12px; }
+      .launch-row { grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
@@ -81,19 +98,42 @@
         <h1 style="margin:0;font-size:22px;">Govorni trener</h1>
         <div id="modeBadge" class="mode">Parent mode</div>
       </div>
+      <div class="panel">
+        <h2 class="title">Pokreni Vežbu</h2>
+        <div class="launch-grid">
+          <div class="launch-row">
+            <button id="launchEasyStandardBtn" type="button" class="btn pri">Easy standard</button>
+            <button id="configEasyStandardBtn" type="button" class="btn mut">Konfiguracija</button>
+          </div>
+          <div class="launch-row">
+            <button id="launchEasyBoardBtn" type="button" class="btn pri">Easy board</button>
+            <button id="configEasyBoardBtn" type="button" class="btn mut">Konfiguracija</button>
+          </div>
+          <div class="launch-row">
+            <button id="launchSpeechBtn" type="button" class="btn pri">Speech mode</button>
+            <button id="configSpeechBtn" type="button" class="btn mut">Konfiguracija</button>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:8px;">Prvo pokreni željeni mod, ili odmah idi na konfiguraciju kartica.</p>
+      </div>
+    </section>
+
+    <section id="configScreen" class="screen">
+      <div class="head">
+        <h1 style="margin:0;font-size:22px;">Konfiguracija</h1>
+        <button id="configBackBtn" type="button" class="btn mut" style="padding:8px 10px;">Nazad</button>
+      </div>
       <div class="tabs">
-        <button id="tabEasyBtn" type="button" class="tab-btn active">Easy</button>
-        <button id="tabSpeechBtn" type="button" class="tab-btn">Speech</button>
+        <button id="tabEasyBtn" type="button" class="tab-btn active">Easy konfiguracija</button>
+        <button id="tabSpeechBtn" type="button" class="tab-btn">Speech konfiguracija</button>
       </div>
 
       <div id="speechTab" class="tab-panel">
         <div class="panel">
-          <h2 class="title">Speech Mode</h2>
-          <div class="row"><button id="startSpeechModeBtn" type="button" class="btn pri">Pokreni speech mode</button></div>
+          <h2 class="title">Speech konfiguracija</h2>
           <p class="hint">U child modu izlaz je zaključan: skriveno dugme 5s + PIN.</p>
         </div>
-
-        <div class="panel">
+        <div id="speechConfigPanel" class="panel">
           <h2 class="title">Dodaj speech karticu</h2>
           <label for="wordInput">Reč</label>
           <input id="wordInput" placeholder="npr. Mama" />
@@ -130,12 +170,10 @@
 
       <div id="easyTab" class="tab-panel active">
         <div class="panel">
-          <h2 class="title">Easy Mode</h2>
-          <div class="row"><button id="startEasyModeBtn" type="button" class="btn pri">Pokreni easy mode</button></div>
-          <p class="hint">U easy modu prikazujemo sliku i zvuk, bez obaveznog izgovora.</p>
+          <h2 class="title">Easy konfiguracija</h2>
+          <p class="hint">Iste easy kartice koristi i easy standard i easy board.</p>
         </div>
-
-        <div class="panel">
+        <div id="easyConfigPanel" class="panel">
           <h2 class="title">Dodaj / Izmeni easy karticu</h2>
           <label for="easyWordInput">Tekst (skriven u easy prikazu)</label>
           <input id="easyWordInput" placeholder="npr. Pas" />
@@ -188,6 +226,16 @@
         </div>
       </div>
     </section>
+
+    <section id="easyBoardScreen" class="screen">
+      <div class="easy-board-wrap">
+        <div class="panel">
+          <h2 class="easy-board-title">Easy board</h2>
+          <p id="easyBoardStatus" class="easy-board-status"></p>
+        </div>
+        <div id="easyBoardGrid" class="easy-board-grid"></div>
+      </div>
+    </section>
   </main>
 
   <section id="rewardOverlay" class="overlay reward">
@@ -237,10 +285,13 @@
     const LEGACY_CARDS_KEY = 'gt_cards_v2';
     const MODE_KEY = 'gt_mode_v2';
     const SESSION_TYPE_KEY = 'gt_session_type_v1';
+    const EASY_VARIANT_KEY = 'gt_easy_variant_v1';
     const PIN_KEY = 'gt_pin_v2';
     const EXIT_HOLD_MS = 5000;
     const EASY_NEXT_LOCK_MS = 5000;
     const EASY_TAP_LOCK_MS = 2000;
+    const EASY_BOARD_LOCK_MS = 2000;
+    const EASY_BOARD_MAX_CARDS = 15;
     const REWARD_LOCK_MS = 3000;
     const EASY_CARDS_KEY = 'gt_easy_cards_v1';
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -276,17 +327,24 @@
       easyTapLocked: false, easyTapLockTimer: null,
       speechTapLocked: false, speechTapLockTimer: null,
       cameraStream: null, cameraTarget: null, capturedSpeechImageUrl: '', capturedEasyImageUrl: '',
-      rewardLocked: false, suppressRecognition: false, suppressTimer: null
+      rewardLocked: false, suppressRecognition: false, suppressTimer: null,
+      easyBoardFocusedId: null, easyBoardLocked: false, easyBoardLockTimer: null,
+      easyVariant: 'standard', parentScreen: 'home'
     };
 
     const $ = (id) => document.getElementById(id);
     const nodes = {
-      homeScreen: $('homeScreen'), practiceScreen: $('practiceScreen'), modeBadge: $('modeBadge'),
+      homeScreen: $('homeScreen'), configScreen: $('configScreen'), practiceScreen: $('practiceScreen'), easyBoardScreen: $('easyBoardScreen'), modeBadge: $('modeBadge'),
       tabSpeechBtn: $('tabSpeechBtn'), tabEasyBtn: $('tabEasyBtn'), speechTab: $('speechTab'), easyTab: $('easyTab'),
-      startSpeechModeBtn: $('startSpeechModeBtn'), startEasyModeBtn: $('startEasyModeBtn'), wordInput: $('wordInput'), speechPassInput: $('speechPassInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
+      configBackBtn: $('configBackBtn'),
+      launchSpeechBtn: $('launchSpeechBtn'), launchEasyStandardBtn: $('launchEasyStandardBtn'), launchEasyBoardBtn: $('launchEasyBoardBtn'),
+      configSpeechBtn: $('configSpeechBtn'), configEasyStandardBtn: $('configEasyStandardBtn'), configEasyBoardBtn: $('configEasyBoardBtn'),
+      speechConfigPanel: $('speechConfigPanel'), easyConfigPanel: $('easyConfigPanel'),
+      wordInput: $('wordInput'), speechPassInput: $('speechPassInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
       recordBtn: $('recordBtn'), stopBtn: $('stopBtn'), playRecordedBtn: $('playRecordedBtn'), saveCardBtn: $('saveCardBtn'), addStatus: $('addStatus'),
       cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), tapNote: $('tapNote'), nextEasyRow: $('nextEasyRow'), nextEasyBtn: $('nextEasyBtn'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceStatus: $('practiceStatus'),
       easyWordInput: $('easyWordInput'), easyImageInput: $('easyImageInput'), openEasyCameraBtn: $('openEasyCameraBtn'), easyAudioInput: $('easyAudioInput'), easyCardsList: $('easyCardsList'), easyRecordBtn: $('easyRecordBtn'), easyStopBtn: $('easyStopBtn'), easyPlayBtn: $('easyPlayBtn'), saveEasyCardBtn: $('saveEasyCardBtn'), cancelEasyEditBtn: $('cancelEasyEditBtn'), easyStatus: $('easyStatus'),
+      easyBoardGrid: $('easyBoardGrid'), easyBoardStatus: $('easyBoardStatus'),
       rewardOverlay: $('rewardOverlay'), hiddenExitBtn: $('hiddenExitBtn'), pinModal: $('pinModal'), pinInput: $('pinInput'), pinConfirmBtn: $('pinConfirmBtn'), pinCancelBtn: $('pinCancelBtn'),
       fsBanner: $('fsBanner'), fsRetryBtn: $('fsRetryBtn'),
       cameraModal: $('cameraModal'), cameraVideo: $('cameraVideo'), cameraCanvas: $('cameraCanvas'), cameraCaptureBtn: $('cameraCaptureBtn'), cameraCancelBtn: $('cameraCancelBtn')
@@ -483,6 +541,8 @@
       if (mode === 'child' || mode === 'parent') state.mode = mode;
       const st = localStorage.getItem(SESSION_TYPE_KEY);
       if (st === 'easy' || st === 'speech') state.childSessionType = st;
+      const easyVariant = localStorage.getItem(EASY_VARIANT_KEY);
+      if (easyVariant === 'standard' || easyVariant === 'board') state.easyVariant = easyVariant;
       state.pin = localStorage.getItem(PIN_KEY) || '1234';
 
       try {
@@ -586,20 +646,34 @@
 
     function showScreen(name) {
       nodes.homeScreen.classList.remove('active');
+      nodes.configScreen.classList.remove('active');
       nodes.practiceScreen.classList.remove('active');
+      nodes.easyBoardScreen.classList.remove('active');
       if (name === 'home') nodes.homeScreen.classList.add('active');
+      if (name === 'config') nodes.configScreen.classList.add('active');
       if (name === 'practice') nodes.practiceScreen.classList.add('active');
+      if (name === 'easy-board') nodes.easyBoardScreen.classList.add('active');
     }
 
     function updateModeUI() {
       nodes.modeBadge.textContent = state.mode === 'child' ? 'Child mode' : 'Parent mode';
       nodes.hiddenExitBtn.style.display = state.mode === 'child' ? 'block' : 'none';
       if (state.mode === 'child') {
-        showScreen('practice');
+        if (state.childSessionType === 'easy') {
+          if (state.easyVariant === 'board') {
+            showScreen('easy-board');
+            renderEasyBoard();
+          } else {
+            showScreen('practice');
+            renderPracticeCard();
+          }
+        } else {
+          showScreen('practice');
+        }
         enforceChildFullscreen();
       } else {
         nodes.fsBanner.classList.remove('show');
-        showScreen('home');
+        showScreen(state.parentScreen === 'config' ? 'config' : 'home');
       }
     }
 
@@ -691,6 +765,51 @@
       if (card.audioUrl) return playAudio(card.audioUrl);
       const fallback = card.soundText || card.word;
       return speakText(fallback);
+    }
+
+    function getVisibleEasyCards() {
+      return state.easyCards.slice(0, EASY_BOARD_MAX_CARDS);
+    }
+
+    function renderEasyBoard() {
+      const cards = getVisibleEasyCards();
+      nodes.easyBoardGrid.innerHTML = '';
+      if (!cards.length) {
+        nodes.easyBoardStatus.textContent = 'Nema easy kartica.';
+        return;
+      }
+      const hasFocus = Boolean(state.easyBoardFocusedId);
+      nodes.easyBoardGrid.classList.toggle('has-focus', hasFocus);
+      nodes.easyBoardGrid.classList.toggle('locked', state.easyBoardLocked);
+      nodes.easyBoardStatus.textContent = state.easyBoardLocked ? 'Sačekaj trenutak...' : '';
+      cards.forEach((card) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'easy-board-card';
+        btn.dataset.cardId = card.id;
+        if (state.easyBoardFocusedId === card.id) btn.classList.add('focused');
+        if (hasFocus && state.easyBoardFocusedId !== card.id) btn.classList.add('faded');
+        btn.innerHTML = `<img src="${card.imageUrl}" alt="${card.word}">`;
+        nodes.easyBoardGrid.appendChild(btn);
+      });
+    }
+
+    async function onEasyBoardCardClick(cardId) {
+      if (state.mode !== 'child' || state.childSessionType !== 'easy') return;
+      if (state.easyBoardLocked) return;
+      const card = state.easyCards.find((c) => c.id === cardId);
+      if (!card) return;
+      state.easyBoardFocusedId = card.id;
+      state.easyBoardLocked = true;
+      clearTimeout(state.easyBoardLockTimer);
+      renderEasyBoard();
+      const played = await playCardSound(card);
+      if (!played) nodes.easyBoardStatus.textContent = 'Ne mogu da pustim zvuk kartice.';
+      state.easyBoardLockTimer = setTimeout(() => {
+        state.easyBoardLocked = false;
+        state.easyBoardFocusedId = null;
+        renderEasyBoard();
+      }, EASY_BOARD_LOCK_MS);
     }
 
     function clearSpeechSuppression() {
@@ -809,6 +928,14 @@
       nodes.tabEasyBtn.classList.toggle('active', !isSpeech);
       nodes.speechTab.classList.toggle('active', isSpeech);
       nodes.easyTab.classList.toggle('active', !isSpeech);
+    }
+
+    function openConfigPanel(tab) {
+      state.parentScreen = 'config';
+      showScreen('config');
+      switchHomeTab(tab);
+      const target = tab === 'speech' ? nodes.speechConfigPanel : nodes.easyConfigPanel;
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function resetEasyForm() {
@@ -1254,7 +1381,7 @@
       }
     }
 
-    function enterChildMode(sessionType) {
+    function enterChildMode(sessionType, easyVariant) {
       if (sessionType === 'speech' && !state.cards.length) {
         setStatus(nodes.addStatus, 'Dodaj bar jednu karticu za speech mode.', 'warn');
         return;
@@ -1266,8 +1393,12 @@
       }
       state.mode = 'child';
       state.childSessionType = sessionType;
+      if (sessionType === 'easy' && (easyVariant === 'standard' || easyVariant === 'board')) {
+        state.easyVariant = easyVariant;
+      }
       localStorage.setItem(MODE_KEY, state.mode);
       localStorage.setItem(SESSION_TYPE_KEY, state.childSessionType);
+      localStorage.setItem(EASY_VARIANT_KEY, state.easyVariant);
       state.index = 0;
       state.advancing = false;
       state.listenedCurrent = false;
@@ -1280,6 +1411,10 @@
       state.speechTapLockTimer = null;
       clearTimeout(state.easyUnlockTimer);
       state.easyUnlockTimer = null;
+      clearTimeout(state.easyBoardLockTimer);
+      state.easyBoardLockTimer = null;
+      state.easyBoardLocked = false;
+      state.easyBoardFocusedId = null;
       clearSpeechSuppression();
       updateModeUI();
       installChildNavigationLock();
@@ -1295,11 +1430,17 @@
       clearTimeout(state.speechTapLockTimer);
       state.speechTapLockTimer = null;
       state.speechTapLocked = false;
+      clearTimeout(state.easyBoardLockTimer);
+      state.easyBoardLockTimer = null;
+      state.easyBoardLocked = false;
+      state.easyBoardFocusedId = null;
       clearSpeechSuppression();
       state.mode = 'parent';
       state.childSessionType = 'speech';
+      state.parentScreen = 'home';
       localStorage.setItem(MODE_KEY, state.mode);
       localStorage.setItem(SESSION_TYPE_KEY, state.childSessionType);
+      localStorage.setItem(EASY_VARIANT_KEY, state.easyVariant);
       nodes.pinModal.classList.remove('show');
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
@@ -1310,7 +1451,11 @@
     function startExitHold() {
       if (state.mode !== 'child') return;
       clearTimeout(state.holdTimer);
-      setStatus(nodes.practiceStatus, 'Drži skriveno dugme 5 sekundi za unlock.', 'warn');
+      if (state.childSessionType === 'easy') {
+        nodes.easyBoardStatus.textContent = 'Drži skriveno dugme 5 sekundi za unlock.';
+      } else {
+        setStatus(nodes.practiceStatus, 'Drži skriveno dugme 5 sekundi za unlock.', 'warn');
+      }
       state.holdTimer = setTimeout(() => {
         nodes.pinModal.classList.add('show');
         nodes.pinInput.value = '';
@@ -1326,8 +1471,16 @@
     function bind() {
       nodes.tabSpeechBtn.addEventListener('click', () => switchHomeTab('speech'));
       nodes.tabEasyBtn.addEventListener('click', () => switchHomeTab('easy'));
-      nodes.startSpeechModeBtn.addEventListener('click', () => enterChildMode('speech'));
-      nodes.startEasyModeBtn.addEventListener('click', () => enterChildMode('easy'));
+      nodes.configBackBtn.addEventListener('click', () => {
+        state.parentScreen = 'home';
+        showScreen('home');
+      });
+      nodes.launchSpeechBtn.addEventListener('click', () => enterChildMode('speech'));
+      nodes.launchEasyStandardBtn.addEventListener('click', () => enterChildMode('easy', 'standard'));
+      nodes.launchEasyBoardBtn.addEventListener('click', () => enterChildMode('easy', 'board'));
+      nodes.configSpeechBtn.addEventListener('click', () => openConfigPanel('speech'));
+      nodes.configEasyStandardBtn.addEventListener('click', () => openConfigPanel('easy'));
+      nodes.configEasyBoardBtn.addEventListener('click', () => openConfigPanel('easy'));
       nodes.openSpeechCameraBtn.addEventListener('click', () => openCamera('speech'));
       nodes.openEasyCameraBtn.addEventListener('click', () => openCamera('easy'));
       nodes.cameraCaptureBtn.addEventListener('click', captureCameraImage);
@@ -1351,6 +1504,11 @@
         if (!state.recordedAudioUrl) return;
         const played = await playAudio(state.recordedAudioUrl);
         setStatus(nodes.addStatus, played ? 'Puštam snimljeni zvuk.' : 'Ne mogu da pustim snimljeni zvuk.', played ? 'ok' : 'warn');
+      });
+      nodes.easyBoardGrid.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-card-id]');
+        if (!btn) return;
+        onEasyBoardCardClick(btn.dataset.cardId);
       });
 
       nodes.tapCard.addEventListener('click', async () => {
@@ -1460,12 +1618,19 @@
       installChildNavigationLock();
       renderCardsList();
       renderEasyCardsList();
+      renderEasyBoard();
       resetEasyForm();
       switchHomeTab('easy');
       updateModeUI();
       if (state.mode === 'child') {
-        renderPracticeCard();
-        if (state.childSessionType === 'speech') restartListening();
+        if (state.childSessionType === 'speech') {
+          renderPracticeCard();
+          restartListening();
+        } else if (state.easyVariant === 'board') {
+          renderEasyBoard();
+        } else {
+          renderPracticeCard();
+        }
       } else {
         setStatus(nodes.addStatus, 'Dodaj podatke kartice pa sačuvaj.', '');
         setStatus(nodes.easyStatus, 'Dodaj easy karticu ili izaberi postojeću za izmenu.', '');
