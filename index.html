@@ -155,6 +155,12 @@
         </div>
         <div id="speechConfigPanel" class="panel">
           <h2 class="title">Dodaj govornu karticu</h2>
+          <label for="speechSensitivitySelect">Osetljivost prepoznavanja</label>
+          <select id="speechSensitivitySelect">
+            <option value="strict">Strogo</option>
+            <option value="medium" selected>Srednje</option>
+            <option value="tolerant">Tolerantno</option>
+          </select>
           <label for="wordInput">Reč</label>
           <input id="wordInput" placeholder="npr. Mama" />
           <label for="speechPassInput">Dovoljno za prolaz (zarezom)</label>
@@ -306,6 +312,7 @@
     const MODE_KEY = 'gt_mode_v2';
     const SESSION_TYPE_KEY = 'gt_session_type_v1';
     const EASY_VARIANT_KEY = 'gt_easy_variant_v1';
+    const SPEECH_SENSITIVITY_KEY = 'gt_speech_sensitivity_v1';
     const PIN_KEY = 'gt_pin_v2';
     const EXIT_HOLD_MS = 5000;
     const EASY_NEXT_LOCK_MS = 5000;
@@ -349,7 +356,7 @@
       cameraStream: null, cameraTarget: null, capturedSpeechImageUrl: '', capturedEasyImageUrl: '',
       rewardLocked: false, suppressRecognition: false, suppressTimer: null,
       easyBoardFocusedId: null, easyBoardLocked: false, easyBoardLockTimer: null,
-      easyVariant: 'standard', parentScreen: 'home'
+      easyVariant: 'standard', parentScreen: 'home', speechSensitivity: 'medium', speechPermissionBlocked: false
     };
 
     const $ = (id) => document.getElementById(id);
@@ -361,7 +368,7 @@
       exportBackupBtn: $('exportBackupBtn'), importBackupBtn: $('importBackupBtn'), importBackupInput: $('importBackupInput'), backupStatus: $('backupStatus'),
       launchSpeechBtn: $('launchSpeechBtn'), launchEasyStandardBtn: $('launchEasyStandardBtn'), launchEasyBoardBtn: $('launchEasyBoardBtn'),
       speechConfigPanel: $('speechConfigPanel'), easyConfigPanel: $('easyConfigPanel'),
-      wordInput: $('wordInput'), speechPassInput: $('speechPassInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
+      speechSensitivitySelect: $('speechSensitivitySelect'), wordInput: $('wordInput'), speechPassInput: $('speechPassInput'), imageInput: $('imageInput'), openSpeechCameraBtn: $('openSpeechCameraBtn'), audioInput: $('audioInput'),
       recordBtn: $('recordBtn'), stopBtn: $('stopBtn'), playRecordedBtn: $('playRecordedBtn'), saveCardBtn: $('saveCardBtn'), addStatus: $('addStatus'),
       cardsList: $('cardsList'), progress: $('progress'), tapCard: $('tapCard'), tapNote: $('tapNote'), nextEasyRow: $('nextEasyRow'), nextEasyBtn: $('nextEasyBtn'), practiceImage: $('practiceImage'), practiceWord: $('practiceWord'), practiceStatus: $('practiceStatus'),
       easyWordInput: $('easyWordInput'), easyImageInput: $('easyImageInput'), openEasyCameraBtn: $('openEasyCameraBtn'), easyAudioInput: $('easyAudioInput'), easyCardsList: $('easyCardsList'), easyRecordBtn: $('easyRecordBtn'), easyStopBtn: $('easyStopBtn'), easyPlayBtn: $('easyPlayBtn'), saveEasyCardBtn: $('saveEasyCardBtn'), cancelEasyEditBtn: $('cancelEasyEditBtn'), easyStatus: $('easyStatus'),
@@ -373,6 +380,90 @@
 
     function normalizeWord(text) {
       return (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function levenshtein(a, b) {
+      const x = a || '';
+      const y = b || '';
+      const dp = Array.from({ length: x.length + 1 }, () => Array(y.length + 1).fill(0));
+      for (let i = 0; i <= x.length; i += 1) dp[i][0] = i;
+      for (let j = 0; j <= y.length; j += 1) dp[0][j] = j;
+      for (let i = 1; i <= x.length; i += 1) {
+        for (let j = 1; j <= y.length; j += 1) {
+          const cost = x[i - 1] === y[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + cost
+          );
+        }
+      }
+      return dp[x.length][y.length];
+    }
+
+    function getSensitivityRules() {
+      const s = state.speechSensitivity;
+      if (s === 'strict') {
+        return {
+          minLen: 2,
+          prefixMinTarget: 3,
+          prefixMinRatio: 0.75,
+          allowDistShort: 1,
+          allowDistLong: 1,
+          minSimilarityShort: 0.9,
+          minSimilarityLong: 0.86,
+          minSimilarityWithDist: 0.84
+        };
+      }
+      if (s === 'tolerant') {
+        return {
+          minLen: 2,
+          prefixMinTarget: 3,
+          prefixMinRatio: 0.5,
+          allowDistShort: 1,
+          allowDistLong: 2,
+          minSimilarityShort: 0.8,
+          minSimilarityLong: 0.75,
+          minSimilarityWithDist: 0.72
+        };
+      }
+      return {
+        minLen: 2,
+        prefixMinTarget: 3,
+        prefixMinRatio: 0.6,
+        allowDistShort: 1,
+        allowDistLong: 2,
+        minSimilarityShort: 0.85,
+        minSimilarityLong: 0.8,
+        minSimilarityWithDist: 0.78
+      };
+    }
+
+    function looksLikeTarget(spoken, target) {
+      if (!spoken || !target) return false;
+      const r = getSensitivityRules();
+      if (spoken.length < r.minLen) return false;
+      if (spoken === target) return true;
+      if (spoken.includes(target)) return true;
+      if (target.length >= r.prefixMinTarget && spoken.startsWith(target.slice(0, 2)) && spoken.length >= Math.ceil(target.length * r.prefixMinRatio)) return true;
+
+      const dist = levenshtein(spoken, target);
+      const maxLen = Math.max(spoken.length, target.length);
+      const similarity = maxLen ? 1 - (dist / maxLen) : 0;
+      const allowDist = target.length <= 5 ? r.allowDistShort : r.allowDistLong;
+      if (dist <= allowDist && similarity >= r.minSimilarityWithDist) return true;
+      if (target.length <= 4 && similarity >= r.minSimilarityShort) return true;
+      if (target.length > 4 && similarity >= r.minSimilarityLong) return true;
+      return false;
+    }
+
+    function extractCandidates(recognizedText) {
+      const rec = normalizeWord(recognizedText);
+      if (!rec) return [];
+      const tokens = rec.split(' ').filter(Boolean);
+      const candidates = new Set([rec, ...tokens]);
+      for (let i = 0; i < tokens.length - 1; i += 1) candidates.add(`${tokens[i]} ${tokens[i + 1]}`);
+      return [...candidates];
     }
 
     function parsePassPhrases(value) {
@@ -582,6 +673,10 @@
       if (st === 'easy' || st === 'speech') state.childSessionType = st;
       const easyVariant = localStorage.getItem(EASY_VARIANT_KEY);
       if (easyVariant === 'standard' || easyVariant === 'board') state.easyVariant = easyVariant;
+      const speechSensitivity = localStorage.getItem(SPEECH_SENSITIVITY_KEY);
+      if (speechSensitivity === 'strict' || speechSensitivity === 'medium' || speechSensitivity === 'tolerant') {
+        state.speechSensitivity = speechSensitivity;
+      }
       state.pin = localStorage.getItem(PIN_KEY) || '1234';
 
       try {
@@ -1022,7 +1117,8 @@
           exportedAt: new Date().toISOString(),
           settings: {
             pin: state.pin,
-            easyVariant: state.easyVariant
+            easyVariant: state.easyVariant,
+            speechSensitivity: state.speechSensitivity
           },
           speechCards: state.cards.map((c, idx) => ({
             id: c.id,
@@ -1108,10 +1204,15 @@
       const nextEasyVariant = parsed && parsed.settings && (parsed.settings.easyVariant === 'standard' || parsed.settings.easyVariant === 'board')
         ? parsed.settings.easyVariant
         : state.easyVariant;
+      const nextSpeechSensitivity = parsed && parsed.settings && (parsed.settings.speechSensitivity === 'strict' || parsed.settings.speechSensitivity === 'medium' || parsed.settings.speechSensitivity === 'tolerant')
+        ? parsed.settings.speechSensitivity
+        : state.speechSensitivity;
       state.pin = nextPin || '1234';
       state.easyVariant = nextEasyVariant;
+      state.speechSensitivity = nextSpeechSensitivity;
       localStorage.setItem(PIN_KEY, state.pin);
       localStorage.setItem(EASY_VARIANT_KEY, state.easyVariant);
+      localStorage.setItem(SPEECH_SENSITIVITY_KEY, state.speechSensitivity);
       state.mode = 'parent';
       state.childSessionType = 'speech';
       state.parentScreen = 'config';
@@ -1123,6 +1224,7 @@
       renderCardsList();
       renderEasyCardsList();
       renderEasyBoard();
+      nodes.speechSensitivitySelect.value = state.speechSensitivity;
       updateModeUI();
       openConfigPanel('easy');
       setBackupStatus('Backup je uspešno uvezen.', 'ok');
@@ -1396,22 +1498,23 @@
       }, REWARD_LOCK_MS);
     }
 
-    function onRecognized(transcript) {
+    function onRecognized(transcripts) {
       if (state.suppressRecognition) return;
       if (state.advancing) return;
       const card = currentSessionCard();
       if (!card) return;
-      const rec = normalizeWord(transcript);
-      const target = normalizeWord(card.word);
-      const tokens = rec.split(' ').filter(Boolean);
-      const passList = [target, ...((card.passPhrases || []).map((x) => normalizeWord(x)).filter(Boolean))];
-      const matched = passList.some((p) => rec === p || tokens.includes(p) || rec.includes(p));
+      const transcriptList = Array.isArray(transcripts) ? transcripts : [String(transcripts || '')];
+      const passList = [card.word, ...((card.passPhrases || []))].map((x) => normalizeWord(x)).filter(Boolean);
+      const allCandidates = transcriptList.flatMap((t) => extractCandidates(t));
+      const matchedCandidate = allCandidates.find((cand) => passList.some((p) => looksLikeTarget(cand, p)));
+      const preview = transcriptList.filter(Boolean).join(' | ');
+      const matched = Boolean(matchedCandidate);
       if (matched) {
         state.advancing = true;
-        setStatus(nodes.practiceStatus, `Prepoznato: "${transcript}" - uslov ispunjen za "${card.word}".`, 'ok');
+        setStatus(nodes.practiceStatus, `Prepoznato: "${preview}" - uslov ispunjen za "${card.word}".`, 'ok');
         showRewardThenNext();
       } else {
-        setStatus(nodes.practiceStatus, `Čuo sam: "${transcript}". Još nema uslova za "${card.word}".`, 'warn');
+        setStatus(nodes.practiceStatus, `Čuo sam: "${preview}". Još nema uslova za "${card.word}".`, 'warn');
       }
     }
 
@@ -1424,6 +1527,7 @@
 
     function restartListening() {
       if (state.mode !== 'child' || state.childSessionType !== 'speech') return;
+      if (state.speechPermissionBlocked) return;
       if (!SR) {
         setStatus(nodes.practiceStatus, 'Prepoznavanje govora nije podržano na ovom browseru.', 'warn');
         return;
@@ -1431,17 +1535,34 @@
       stopListening();
       state.recognition = new SR();
       state.recognition.lang = 'sr-RS';
-      state.recognition.interimResults = false;
-      state.recognition.maxAlternatives = 1;
-      state.recognition.continuous = false;
+      state.recognition.interimResults = true;
+      state.recognition.maxAlternatives = 5;
+      state.recognition.continuous = true;
       state.recognition.onstart = () => { state.listening = true; };
-      state.recognition.onresult = (e) => onRecognized(e.results[0][0].transcript || '');
-      state.recognition.onerror = () => {
+      state.recognition.onresult = (e) => {
+        const outs = [];
+        for (let i = e.resultIndex; i < e.results.length; i += 1) {
+          const alt = e.results[i];
+          for (let j = 0; j < alt.length; j += 1) {
+            const t = alt[j] && alt[j].transcript ? String(alt[j].transcript) : '';
+            if (t) outs.push(t);
+          }
+        }
+        if (outs.length) onRecognized(outs);
+      };
+      state.recognition.onerror = (e) => {
+        const err = e && e.error ? String(e.error) : '';
+        if (err === 'not-allowed' || err === 'service-not-allowed' || err === 'audio-capture') {
+          state.speechPermissionBlocked = true;
+          stopListening();
+          setStatus(nodes.practiceStatus, 'Mikrofon je blokiran. Dozvoli pristup mikrofonu u browseru pa ponovo pokreni govorni režim.', 'warn');
+          return;
+        }
         if (!state.advancing && !state.suppressRecognition) setStatus(nodes.practiceStatus, 'Nisam razumeo pokušaj. Slušam ponovo...', 'warn');
       };
       state.recognition.onend = () => {
         state.listening = false;
-        if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing && !state.suppressRecognition) setTimeout(restartListening, 250);
+        if (state.mode === 'child' && state.childSessionType === 'speech' && !state.advancing && !state.suppressRecognition && !state.speechPermissionBlocked) setTimeout(restartListening, 250);
       };
       try { state.recognition.start(); } catch { setTimeout(restartListening, 350); }
     }
@@ -1583,6 +1704,7 @@
       }
       state.mode = 'child';
       state.childSessionType = sessionType;
+      state.speechPermissionBlocked = false;
       if (sessionType === 'easy' && (easyVariant === 'standard' || easyVariant === 'board')) {
         state.easyVariant = easyVariant;
       }
@@ -1662,6 +1784,14 @@
       nodes.tabSpeechBtn.addEventListener('click', () => switchHomeTab('speech'));
       nodes.tabEasyBtn.addEventListener('click', () => switchHomeTab('easy'));
       nodes.openConfigBtn.addEventListener('click', () => openConfigPanel('easy'));
+      nodes.speechSensitivitySelect.addEventListener('change', () => {
+        const v = nodes.speechSensitivitySelect.value;
+        if (v === 'strict' || v === 'medium' || v === 'tolerant') {
+          state.speechSensitivity = v;
+          localStorage.setItem(SPEECH_SENSITIVITY_KEY, v);
+          setStatus(nodes.addStatus, `Osetljivost prepoznavanja: ${v === 'strict' ? 'strogo' : (v === 'tolerant' ? 'tolerantno' : 'srednje')}.`, 'ok');
+        }
+      });
       nodes.exportBackupBtn.addEventListener('click', exportBackup);
       nodes.importBackupBtn.addEventListener('click', () => nodes.importBackupInput.click());
       nodes.importBackupInput.addEventListener('change', async () => {
@@ -1815,6 +1945,7 @@
       renderCardsList();
       renderEasyCardsList();
       renderEasyBoard();
+      nodes.speechSensitivitySelect.value = state.speechSensitivity;
       resetEasyForm();
       switchHomeTab('easy');
       updateModeUI();
